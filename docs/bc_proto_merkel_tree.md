@@ -1,0 +1,2 @@
+The Merkel tree is a data structure that often used to store data within individual blocks. It uses hash functions to allow efficient verification of 
+This structure uses hash functions to enable efficient verification of the content of the data structure. The leaf node of the structure contains the data and the nodes contains the hash of the children. This way if any of the data is changed, the whole tree is invalidated.
