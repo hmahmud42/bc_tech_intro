@@ -16,6 +16,8 @@ A ledger is a record of a set of transactions of some sort, that grows over time
 
 A [peer to peer (P2P)](https://en.wikipedia.org/wiki/Peer-to-peer) distributed ledger (DL) is a digital ledger that is maintained via a peer to peer system with no central trusted authority. This means the ledger only exists in form of electronic bits (the 'digital' part) on various computer systems of equal status, connected via a communications network, like the internet or a private network,  (the 'peer to peer distributed' part). Trust in the contents of the ledger is guaranteed by means of clever cryptographic algorithms (the 'no central trusted authority' part).
 
+[Authorization and Ordering of Transactions]
+
 ## P2P Distributed Ledger Applications
 
 A P2P DL becomes necessary when either no trusted central authority is available or the central authority currently available is inefficient or costly. An example that is often given is transferring money across international borders. The transfer process is usually quite slow, inefficient and expensive despite the fact that the actual transfer happens digitally. This is primarily because the transfer process is largely centralized and is carried out by a series of large banks in different jurisdictions, each of which take time process their ledgers to reflect the transfer and also charge a fee for their service. 
@@ -27,6 +29,8 @@ The application of distributed ledgers is limited only by your imagination. Othe
 Currently, there are an enormous number of blockchain platforms available targeted for specific applications. Example of two platforms designed to support generic use-cases are [Ethereu](https://ethereum.org) and [Substrate](https://substrate.io/). This is **not** an endorsement of either of these -  but merely examples. Please do your own research before selecting one for your use case.
 
 This concludes our brief look at blockchain/distributed ledger technology at a high level. Please refer to [1] or [2] for a much broader look into blockchain technology and its applications. We will now look at the blockchain data structure in the next part.
+
+
 
 
 ## References
