@@ -117,28 +117,61 @@ The above was directly inspired by the transaction form at in Ethereum, which is
 - `from`: the current owner,  digitally identified by their [public key](https://en.wikipedia.org/wiki/Public-key_cryptography)
 - `to`: the new owner, also identified by their public key
 - `fee`: the fee to be received by the node that successfully creates the block for this transaction (see below).
-- `nonce`: this is the number of transactions from the `from` user that has been added to the blockchain so far + 1. This is to id this transaction specifically, and prevent double transfers (transfering the same item to multiple users). We will discuss this more below.
+- `nonce`: this is the number of transactions from the `from` user that has been added to the blockchain so far + 1. This is to id this transaction specifically, and prevent double transfers (transfering the same item to multiple users). Note that this is another `nonce`, different from the one we discussed [before](./bc_proto_blockchain_ds.md#contents-of-a-single-simplified-block). We will discuss this more below.
 - `title_name`: a digital id of the object whose ownership is being transferred.
 
-The digital signature for this transaction is created by (roughly speaking) hashing the string corresponding to the transaction and then signing the hash. By the [uniqueness property of hash functions](./bc_proto_blockchain_ds.md#uniqueness-of-hash-functions) and because of the nonce, this is unique for he signed hash can then be verified by using `from`'s public key (which is also their `id` in this instance).
+The digital signature for this transaction is created by the `from` user node by (roughly speaking) hashing the string corresponding to the transaction and then digitally signing the hash using `from`'s private key . The signature can then be verified by using the `from` user's public key (which is also their id). This way we can be sure that transaction was authorized by the `from` user.
+
+### Validating A Transaction
+
+Depending on the nature of the items in the blockchain, several different kinds of validation may need to be performed. In the example above we need to ensure that the `from` user actually owns the item in question by looking at the history of the blockchain and noting that an accepted block records `from` user gaining ownership of the item (there may need to be special 'verified ownership' type transactions to intialize the chain with a user owning a particular item - but we don't address those complications here).
+
+We also need to ensure that the same transaction is not written into the blockchain more than once (in the same or different block). This can be done only accepting transaction into a block if another transaction with nonce exactly one less has already been accepted into the blockchain - which ensures the correct sequencing of the transactions for each user.  
+
+### Communicating Transactions
+
+When a node creates a transaction it ensures that it has been properly authorised and it is valid. It performs the same operation when it receives a transaction from another node. In both cases once a transaction has been properly authorized and validated, it is communicated to the rest of the blockchain using the [gossip protocol](https://en.wikipedia.org/wiki/Gossip_protocol). In this protocol, each node peiodically sends all the peers it knows about an updated list of the new transactions that has occured in the node itself and the new transactions it has received, which have not been accepted into a block yet. That's all there is to it.
+
+Of course, each node also needs to perform the necessary functions to ensure that it remains connected to the peer to peer network of the blockchain - this includes
+- connecting to the peer to peer network itself by querying one or more trusted servers to identify peers that the node can connect with
+- pinging peers to determine if an existing connection is still valid
+- retrieving list of additional peers from current peers that the node can connect to.
+
+The number of connections has to trade off between being reliably connected to the peer to peer network for using it and ensuring its proper functioning vs. flooding the network with too much traffic. However, these are standard issues in peer to peer network design and not specific to blockchains - and so I won't discuss them further here.
 
 
+## Creating and adding a new block
 
-Once created and authorized, they are communicated to the rest of the nodes in the network using a [gossip protocol](https://en.wikipedia.org/wiki/Gossip_protocol). In this protocol, each node peiodically sends all the peers it knows about an updated list of the new transactions that has occured in the node itself and the new transactions it has received, which have not been accepted into a block yet, to all the other nodes it is connected to. Once a node receives a transaction, it assigns it a
-
-
-
-
-## Creating a new block
-
-Once a node has received a sufficiently many new transactions it begins the process of creating a block. To create a block, it creates the Merkel tree for the new transactions, and concatenates the top-hash with the previous-block-header and the timestamp of the current time to create the data for the block. It then solves the mining puzzle to get the nonce [describe various mining puzzles etc.] and then puts them in the block according to the code [here](). That completes creation of the new block. It then adds the new block its own local blockchain and then sends the information to its neighbors via the gossip protocol again.
+Once a node has received a sufficiently many new transactions it begins the process of creating a block. We went through the detail of how this is done in part [Blockchain Datastructure](./bc_proto_blockchain_ds#a-simplified-block-in-python). However there is one difference in the context of a proper blockchain - instead of hashing the list of transactions as described there, the node creates a [Merkel tree](./bc_proto_merkel_tree.md) for the new transactions and uses the top-hash instead. Once created It then adds the new block its own local blockchain as described in the section [Blockchain Datastructure](./bc_proto_blockchain_ds#a-simplified-block-in-python) and then sends the block to the peers the node is connected to via the gossip protocol again. The code for this can be found [here](todo).
 
 
-## Receiving a New Block
+## Receiving a new block
 
-When a node receives a new block, it first validates that the transactions are in fact accurate (we already have this code). It then checks to see that the chain structure defined is consistent with what it already has [give examples]. This can happen because its a distributed node and all the nodes are competing to create the blocks. If there are multiple options, then the longest chain is chosen and this information is propagated. Otherwise it stops.
+The distributed nature of the blockchain makes processing the receipt of a new block a potentially tricky affair. The problem arises from the fact that it is possible (and it does happen in practice) that different parts of the network, developing independently, may have developed different views of the order in which blocks were added and so the blockchain structure at the local node is different from the one declared in the received block. When this happens, its called *forking* of the blockchain and this needs to dealt with. We first discuss how forking happens and then strategies for dealing with.
+
+### Forking of a blockchain
+
+Let us give an example of how forking may happen. Let us start with a case where the blockchain is at a consistent state `S` - that is all nodes agree on the order of blocks in the ledger. Nodes in real peer to peer networks tend to be clustered into groups, so that nodes within a group have fewer hops between each other. The following figure, taken from [2], shows this effect in an early version of the bitcoin network, where you can clearly see at least four different clusters.
+
+![Bitcoin Network Topology](./figures/bitcoin_topology.png)
+
+So what may happen is nodes within a cluster, say cluster `A`,  may create enough new transactions to constitute a new block. Furthermore, because of the use of the gossip protocol these may be communicated to  a single node `N` in cluster `A` before the same can happen at any other node outside the `A`. `N` may then create a new block with block header (shortened) `ab5ef` and communicate that to the blockchain. By a similar process some other node `M` may also end creating a new block with block header (shortened) `fe121` with possibly a different set of transactions and also communicate that to the rest of the blockchain. Hence because of this some peers will think the blockchain is `S` followed by `ab5ef` and others  will think the chain is `S` followed by `fe121` and a node will only know this when it receives both new blocks at some point. Hence The blockchain has _forked_. The figure below illustrates this.
+
+![Forking Example](./figures/forking_example.png)
+
+
+### Strategies for dealing with forking
+
+
+ different nodes may have different views of the blockchain and so the blockchain structure in the new block may contradict the blockchain
+
+The processing that the consensus algorithm performs once it receives a new block reveals an additional complication in maintaining a blockchain which we have not addressed so far.
+
+When a node receives a new block, it first authorizes and validates the  the same way that we described above. It then checks to see that the chain structure defined is consistent with what it already has. This can happen because its a distributed node and all the nodes are competing to create the blocks. If there are multiple options, then the longest chain is chosen and this information is propagated. Otherwise it stops.
 
 
 ## References
 
 [1] Drescher, Daniel. *Blockchain Basics: A Non-Technical Introduction in 25 Steps*. Apress, 2017, 1st ed. Edition
+
+[2] Lischke, Matthias and Fabian, Benjamin. Analyzing the Bitcoin Network: The First Four Years. _Future Network_, 2016, Volume 8, Issue 7.

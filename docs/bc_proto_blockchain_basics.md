@@ -22,14 +22,13 @@ A [peer to peer (P2P)](https://en.wikipedia.org/wiki/Peer-to-peer) distributed l
 
 A P2P DL becomes necessary when either no trusted central authority is available or the central authority currently available is inefficient or costly. An example that is often given is transferring money across international borders. The transfer process is usually quite slow, inefficient and expensive despite the fact that the actual transfer happens digitally. This is primarily because the transfer process is largely centralized and is carried out by a series of large banks in different jurisdictions, each of which take time process their ledgers to reflect the transfer and also charge a fee for their service. 
 
-If the system of money transfer were implemented using a P2P DL then  the transfer would happen directly between the sender and the receiver and would be cost free. Indeed, the inefficiencies of the current financial system was one of the motivating reasons for the invention of the blockchain in the form of the cryptocurrency Bitcoin by the pseudonymous Satoshi Nakamoto [3] .
+If the system of money transfer were implemented using a P2P DL then  the transfer would happen directly between the sender and the receiver and would be cost free. Indeed, the inefficiencies of the current financial system was one of the motivating reasons for the invention of the blockchain in the form of the cryptocurrency Bitcoin by the pseudonymous Satoshi Nakamoto [3].
 
 The application of distributed ledgers is limited only by your imagination. Other potential applications include storing medical records securely without trusting any central authority, assuring quality of products from raw materials to delivery, validating authenticity of data being created by IOT devices and so on. At the same time, setting up an effective DL system for an specific application with the right level of security, scalability and flexibility remains a very challenging engineering and design problem, and should not be undertaken lightly. 
 
 Currently, there are an enormous number of blockchain platforms available targeted for specific applications. Example of two platforms designed to support generic use-cases are [Ethereu](https://ethereum.org) and [Substrate](https://substrate.io/). This is **not** an endorsement of either of these -  but merely examples. Please do your own research before selecting one for your use case.
 
 This concludes our brief look at blockchain/distributed ledger technology at a high level. Please refer to [1] or [2] for a much broader look into blockchain technology and its applications. We will now look at the blockchain data structure in the next part.
-
 
 
 
