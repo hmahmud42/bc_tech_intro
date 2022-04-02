@@ -155,19 +155,34 @@ Let us give an example of how forking may happen. Let us start with a case where
 
 ![Bitcoin Network Topology](./figures/bitcoin_topology.png)
 
-So what may happen is nodes within a cluster, say cluster `A`,  may create enough new transactions to constitute a new block. Furthermore, because of the use of the gossip protocol these may be communicated to  a single node `N` in cluster `A` before the same can happen at any other node outside the `A`. `N` may then create a new block with block header (shortened) `ab5ef` and communicate that to the blockchain. By a similar process some other node `M` may also end creating a new block with block header (shortened) `fe121` with possibly a different set of transactions and also communicate that to the rest of the blockchain. Hence because of this some peers will think the blockchain is `S` followed by `ab5ef` and others  will think the chain is `S` followed by `fe121` and a node will only know this when it receives both new blocks at some point. Hence The blockchain has _forked_. The figure below illustrates this.
+So what may happen is nodes within a cluster, say cluster `A`,  may create enough new transactions to constitute a new block. Furthermore, because of the use of the gossip protocol these may be communicated to  a single node `N` in cluster `A` before the same can happen at any other node outside the `A`. `N` may then create a new block with block header (shortened) `ab5ef` and communicate that to the blockchain. By a similar process some other node `M` may also end creating a new block with block header (shortened) `fe121` with possibly a different set of transactions and also communicate that to the rest of the blockchain. Hence because of this some peers will think the blockchain is `S` followed by `ab5ef` and others  will think the chain is `S` followed by `fe121` and a node will only know this when it receives both new blocks at some point. Hence the blockchain has _forked_. The figure below illustrates this.
 
 ![Forking Example](./figures/forking_example.png)
+
+TODO: read up on deliberate forking.
 
 
 ### Strategies for dealing with forking
 
+Forking means that different nodes in the blockchain will have a different view of the ledger which defeats the whole point of a ledger. Hence, the nodes need to have a protocol to decide what the correct order of transactions is. The main principle that is used to decide among different branches is the following:
 
- different nodes may have different views of the blockchain and so the blockchain structure in the new block may contradict the blockchain
+>**choose the branch that represents the most amount of work by the peers**
 
-The processing that the consensus algorithm performs once it receives a new block reveals an additional complication in maintaining a blockchain which we have not addressed so far.
+That is, the creation of each block represents a certain amount of computational effort required to solve the puzzle, and the amount of computational effort in a branch is the sum of the computational effort in each block in the branch.
 
-When a node receives a new block, it first authorizes and validates the  the same way that we described above. It then checks to see that the chain structure defined is consistent with what it already has. This can happen because its a distributed node and all the nodes are competing to create the blocks. If there are multiple options, then the longest chain is chosen and this information is propagated. Otherwise it stops.
+For instance, if the  computational effort in the creation of each block is the same, then the _longest branch_ is the one that each node would choose as the correct view. Alternatively, if the puzzle solved in each block is of different difficulty, then a node would choose the so called _heaviest branch_ as the correct view.
+
+The skeptical/mathematically inclined reader may be wondering to what extent the above protocol guarantees that the nodes arrive at a consistent view of the blockchain. Generally speaking, the answer is no and it is the subject of on-going research - see for instance [3] or search for "blockchain forking" in Google Scholar. In practice however, the longest chain approach rule seems to work - however, it is also important to be aware of this problem.
+
+TODO: The six transactions rule.
+
+## Rolling back a block
+
+Once a branch is declared invalid, all its block and transactions have to be released.
+
+## Conclusion
+
+This concludes our presentation of the consensus algorithm. The implementation can be found here.
 
 
 ## References
@@ -175,3 +190,5 @@ When a node receives a new block, it first authorizes and validates the  the sam
 [1] Drescher, Daniel. *Blockchain Basics: A Non-Technical Introduction in 25 Steps*. Apress, 2017, 1st ed. Edition
 
 [2] Lischke, Matthias and Fabian, Benjamin. Analyzing the Bitcoin Network: The First Four Years. _Future Network_, 2016, Volume 8, Issue 7.
+
+[3] Decker, Christian and Wattenhofer, Roger. Information propagation in the bitcoin network. IEEE P2P 2013 Proceedings. 2013, pages 1–10.
