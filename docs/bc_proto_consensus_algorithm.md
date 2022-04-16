@@ -1,6 +1,6 @@
 # The Blockchain Consensus Algorithm
 
-One of the properties that make blockchain so attractive is that any node/peer within the chain can create a transaction at any point in time and add it to the ledger. But because there is no central authority coordinating the work of the peers, the problem now is how to ensures that all the peers have a consistent view of the ledger - that is they all agree on what transactions are in the ledger and what order the transactions were performed in. This is called the *blockchain consensus problem* and one of the main innovations of the blockchain technology is an algorithm or protocol that helps solve this.
+One of the properties that make the blockchain technology so attractive is that any node/peer within the chain can create a transaction at any point in time and add it to the ledger. But because there is no central authority coordinating the work of the peers, the problem now is how to ensures that all the peers have a consistent view of the ledger - that is they all agree on what transactions are in the ledger and what order the transactions were performed in. This is called the *blockchain consensus problem* and one of the main innovations of the blockchain technology is an algorithm or protocol that helps solve this. The particular consensus algorithm we look at is often called the Proof of Work based consensus algorithm because, as mentioned [previously](bc_proto_blockchain_ds.md) a cornerstone of this algorithm is the proof of work established when a block is created by solving a puzzle.
 
 Indeed, the [consensus problem](https://en.wikipedia.org/wiki/Consensus_(computer_science) is a general problem that shows up in all distributed systems and is considered to be very difficult to solve. Many different solutions have been proposed in the past and these have complementary strengths, and are applicable for different use cases. Which is another way of saying that no general solution to the consensus problem exists. The blockchain consensus algorithm in particular solves this problem for distributed ledgers by answering the following questions for each node:
 
@@ -8,7 +8,7 @@ Indeed, the [consensus problem](https://en.wikipedia.org/wiki/Consensus_(compute
 
 2. How to create a new block using the new transactions and communicate that to other nodes.
 
-3. What to do when other nodes sends  block to be added
+3. What to do when other nodes sends  block to be added.
 
 4. When and which blocks to add to the local structure and in what order.
 
@@ -20,7 +20,9 @@ One of the key ideas in the blockchain algorithm is that of rewarding nodes that
 
 This reward typically takes the form of fees paid by the nodes that want a transaction stored in the blockchain but can take other forms as well. The fees themselves may be paid using a *token* native to or unique to the blockchain platform, which can in turn be obtained by buying said token in some kind of exchange. However, there are often other forms of reward schemes as well - for instance in the bitcoin protocol, the blockchain that that started it all, the reward is in the form a [certain units of the bitcoin crypotocurrency](https://en.wikipedia.org/wiki/Bitcoin_network#Mined_bitcoins).
 
-The exact form of the reward is not important - what is important is that there *is* a reward in helping maintain the blockchain structure and the reward *is* sufficient to incentivize the nodes in spending the effort required to maintain it. For instance, for bitcoin, the initial incentive for maintaining the network and earning coins was the anticiaption that bitcoins will increase in value in the future (which has certainly [borne out](https://coinmarketcap.com/currencies/bitcoin/) as of writing this document). **However this last example should not, in any shape or form, be considered to be an endorsement of investing in any crypotcurrency.**
+The exact form of the reward is not important - what is important is that there *is* a reward in helping maintain the blockchain structure and the reward *is* sufficient to incentivize the nodes in spending the effort required to maintain it. For instance, for bitcoin, the initial incentive for maintaining the network and earning coins was the anticiaption that bitcoins will increase in value in the future (which has certainly [borne out](https://coinmarketcap.com/currencies/bitcoin/) as of writing this document). **This last example should not, in any shape or form, be considered to be an endorsement of investing in any crypotcurrency.**
+
+In the following we will not explicitly show this reward mechanism in pseudocode because this requires a lot of code to show properly. But we do implement this in our code, so the reader is welcome to have a look at that.
 
 
 ## Blockchain Consesus Algorithm Main Loop
@@ -50,48 +52,36 @@ So the overall algorithm be described as follows (in a python like pseudocode)
 ```python
 TRANS_PER_BLOCK = 8
 
-def blockhain_consensus(blockchain,
-                        ext_trans_Q,
-                        node_trans_Q,
-                        new_block_Q):
-    valid_trans = [] # list of valid transactions not yet added
-    invalid_trans = [] # list of invalid transactions
-
+def blockhain_consensus(bc: Blockchain,
+                        ext_trans: Queue<str>,
+                        node_trans: Queue<str>,
+                        new_block: Queue<Block>):
     while True:
         # wait until there are transactions or blocks to process
-        while ext_trans_Q.is_empty() and node_trans_Q.is_empty() and
-            new_block_Q.is_empty() and len(valid_trans) < TRANS_PER_BLOCK:
-            wait()
+        while empty(ext_trans) and empty(node_trans) and empty(new_block):
+            wait() 
 
-        # add any new  transactions from peers        
-        trans_not_added = ext_trans_Q.as_list() + node_trans_Q.as_list()
-
-        # validate transactions and
-        _valid_trans, _invalid_trans = validate_transaction(trans_not_added)
-        valid_trans.extend(_valid_trans)
-        invalid_trans.extend(_invalid_trans)
-
-        # create a new block if sufficiently new transactions are present
-        if len(valid_trans) >= TRANS_PER_BLOCK:
-            # The new block possibly contains information about the reward
-            # the node receives for creating the new block
-            new_block = create_new_block(valid_trans, TRANS_PER_BLOCK)
-            add_block(blockchain, new_block)
-            communicate_new_block_to_peers(new_block)
-
-        if len(invalid_trans) > 0:
-            communicate_invalid_trans_to_peers(invalid_trans)
+        invalid_trans = []
+        for trans in concatenate(ext_trans, node_trans):
+            if validate_transaction(trans_not_added):
+                communicate_transaction_to_peers(trans)
+                nb = add_transaction(bc, trans)
+                if nb is not null:
+                    communicate_new_block_to_peers(nb)
 
         # check if any new block has been received and process them
         for new_block in new_block_Q:
             new_block = new_block_Q
             if validate_block(blockchain, new_block):
-                add_block(blockchain, block)
+                add_external_block(blockchain, block)
             else:
                 communicate_invalid_block(block)
 ```
-The algorithm runs in an infinite loop and receives four references as arguments: to the blockchain (`blockchain`), to a queue of transactions from other peers (`ext_trans_Q`), a queue of transactions performed at the current node (`node_trans_Q`) and a queue of new blocks received from peers (`new_block_Q`). All the queues get filled by separate processeses running in parallel. As a first step, the algorithm waits until there are transactions or blocks to process. If there are new transactions, these are added to the list of transactions not yet added to a block. The list of transactions not yet added are then processed to get a list of valid and invalid transactions. If the number of valid transactions are sufficient to create a new block then a new block is created and communicated to the peers. After that any new received from the peers is added to the current blockchain.
+The algorithm runs in an infinite loop (`while True:`)and receives four references as arguments: to the blockchain (`bc`), to a queue of transactions from other peers (`ext_trans`), a queue of transactions performed at the current node (`node_trans`) and a queue of new blocks received from peers (`new_block`). All the queues get filled by separate processeses running in parallel. 
 
+The algorithm waits until there are transactions or blocks to process. If there are new transactions, these are added the blockchain one by one in the first `for` loop. For each transaction, it is first validated (again, see below), and if the transaction is valid, it is commnunicated to the peers of the node and added to the blockchain. Adding a transaction may trigger the creation of a new block. If a block is created it is communicated to the peers of this node(see below). 
+
+In the second for loop, the queue of new blocks is iterated through and all the blocks in the queue are validated and added to the chain. 
 
 
 ## Creating and Communicating Transactions
@@ -100,7 +90,7 @@ As we mentioned above, transactions can be created by any node in the blockchain
 
 ### Authorizing a Transaction
 
-When a distributed ledger is used to record transfer of some ownership of some item (land, jewellery, guitar, take your pick) between users, it is often protected using [public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography) so that the transfer from user A to any other user is [digitally signed](https://en.wikipedia.org/wiki/Digital_signature) by A's _private key_.
+When a distributed ledger is used to record transfer of some ownership of some item (land, jewellery, guitar, take your pick) between users, it is often protected using [public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography) so that the transfer from user A to any other user is [digitally signed](https://en.wikipedia.org/wiki/Digital_signature) by A's _private key_. 
 > Since both public-key cryptography and digital signature are well known computer science concepts I will not discuss them in detail beyond the links.
 
 For example a transaction may look like the following
@@ -117,7 +107,7 @@ The above was directly inspired by the transaction form at in Ethereum, which is
 - `from`: the current owner,  digitally identified by their [public key](https://en.wikipedia.org/wiki/Public-key_cryptography)
 - `to`: the new owner, also identified by their public key
 - `fee`: the fee to be received by the node that successfully creates the block for this transaction (see below).
-- `nonce`: this is the number of transactions from the `from` user that has been added to the blockchain so far + 1. This is to id this transaction specifically, and prevent double transfers (transfering the same item to multiple users). Note that this is another `nonce`, different from the one we discussed [before](./bc_proto_blockchain_ds.md#contents-of-a-single-simplified-block). We will discuss this more below.
+- `nonce`: this is the number of transactions from the `from` user that has been added to the blockchain so far + 1. This is to id this transaction specifically, and prevent double transfers (transfering the same item to multiple users). Note that this is another `nonce`, different from the one we discussed [before](./bc_proto_blockchain_ds.md#Blocks). We will discuss this more below.
 - `title_name`: a digital id of the object whose ownership is being transferred.
 
 The digital signature for this transaction is created by the `from` user node by (roughly speaking) hashing the string corresponding to the transaction and then digitally signing the hash using `from`'s private key . The signature can then be verified by using the `from` user's public key (which is also their id). This way we can be sure that transaction was authorized by the `from` user.
@@ -142,7 +132,7 @@ The number of connections has to trade off between being reliably connected to t
 
 ## Creating and adding a new block
 
-Once a node has received a sufficiently many new transactions it begins the process of creating a block. We went through the detail of how this is done in part [Blockchain Datastructure](./bc_proto_blockchain_ds#a-simplified-block-in-python). However there is one difference in the context of a proper blockchain - instead of hashing the list of transactions as described there, the node creates a [Merkel tree](./bc_proto_merkel_tree.md) for the new transactions and uses the top-hash instead. Once created It then adds the new block its own local blockchain as described in the section [Blockchain Datastructure](./bc_proto_blockchain_ds#a-simplified-block-in-python) and then sends the block to the peers the node is connected to via the gossip protocol again. The code for this can be found [here](todo).
+Once a node has received a sufficiently many new transactions it begins the process of adding a new block. We went through the detail of how this is done in part [Blockchain Datastructure](./bc_proto_blockchain_ds#blocks) and will not discuss them furhter here. Once added, the block is sent to the peers the node is connected to via the gossip protocol again. The code for this can be found [here](todo).
 
 
 ## Receiving a new block
@@ -153,13 +143,19 @@ The distributed nature of the blockchain makes processing the receipt of a new b
 
 Let us give an example of how forking may happen. Let us start with a case where the blockchain is at a consistent state `S` - that is all nodes agree on the order of blocks in the ledger. Nodes in real peer to peer networks tend to be clustered into groups, so that nodes within a group have fewer hops between each other. The following figure, taken from [2], shows this effect in an early version of the bitcoin network, where you can clearly see at least four different clusters.
 
-![Bitcoin Network Topology](./figures/bitcoin_topology.png)
+<p align="center">
+  <img src="figures/bitcoin_topology.png" width="450"/>
+</p>
+<figcaption align = "center"><b> Figure: Bitcoin Network Topology.</b></figcaption>
 
-So what may happen is nodes within a cluster, say cluster `A`,  may create enough new transactions to constitute a new block. Furthermore, because of the use of the gossip protocol these may be communicated to  a single node `N` in cluster `A` before the same can happen at any other node outside the `A`. `N` may then create a new block with block header (shortened) `ab5ef` and communicate that to the blockchain. By a similar process some other node `M` may also end creating a new block with block header (shortened) `fe121` with possibly a different set of transactions and also communicate that to the rest of the blockchain. Hence because of this some peers will think the blockchain is `S` followed by `ab5ef` and others  will think the chain is `S` followed by `fe121` and a node will only know this when it receives both new blocks at some point. Hence the blockchain has _forked_. The figure below illustrates this.
+So what may happen is nodes within a cluster, say cluster `A`,  may create enough new transactions to constitute a new block. Furthermore, because of the use of the gossip protocol these may be communicated to  a single node `N` in cluster `A` before the same can happen at any other node outside the `A`. `N` may then create a new block with block hash (shortened) `ab5ef` and communicate that to the blockchain. By a similar process some other node `M` may also end creating a new block with block hash (shortened) `fe121` with possibly a different set of transactions and also communicate that to the rest of the blockchain. Hence because of this some peers will think the blockchain is `S` followed by `ab5ef` and others  will think the chain is `S` followed by `fe121` and a node will only know this when it receives both new blocks at some point. Hence the blockchain has _forked_. The figure below illustrates this.
 
-![Forking Example](./figures/forking_example.png)
+<p align="center">
+  <img src="figures/forking_example.png" width="450"/>
+</p>
+<figcaption align = "center"><b> Figure: Forking Example.</b></figcaption>
 
-TODO: read up on deliberate forking.
+A blockchain may also be forked intentionally to, for instance, upgrading to a different version of the software etc. This is a vast topic in and of itself - the [wikipedia article](https://en.wikipedia.org/wiki/Fork_(blockchain)) is a potential starting point for further research.
 
 
 ### Strategies for dealing with forking
@@ -168,22 +164,29 @@ Forking means that different nodes in the blockchain will have a different view 
 
 >**choose the branch that represents the most amount of work by the peers**
 
-That is, the creation of each block represents a certain amount of computational effort required to solve the puzzle, and the amount of computational effort in a branch is the sum of the computational effort in each block in the branch.
+That is, the creation of each block represents a certain amount of computational effort required to solve the puzzle (but not always - see [here](bc_proto_conclusion.md)), and the amount of computational effort in a branch is the sum of the computational effort in each block in the branch.
 
 For instance, if the  computational effort in the creation of each block is the same, then the _longest branch_ is the one that each node would choose as the correct view. Alternatively, if the puzzle solved in each block is of different difficulty, then a node would choose the so called _heaviest branch_ as the correct view.
 
-The skeptical/mathematically inclined reader may be wondering to what extent the above protocol guarantees that the nodes arrive at a consistent view of the blockchain. Generally speaking, the answer is no and it is the subject of on-going research - see for instance [3] or search for "blockchain forking" in Google Scholar. In practice however, the longest chain approach rule seems to work - however, it is also important to be aware of this problem.
+The skeptical/mathematically inclined reader may be wondering whether the above protocol guarantees that the nodes arrive at a consistent view of the blockchain. Generally speaking, the answer is no and it is the subject of on-going research - see for instance [3] or search for "blockchain forking" in Google Scholar. In practice however, the longest chain approach rule seems to work - however, it is also important to be aware of this problem. 
 
-TODO: The six transactions rule.
+One rule of thumb that is often used to not let forking disrupt use of the blockcahin is as follows: a transaction is not conisdered to be part of the chain for validation purposes unless the block it is in is at least sixth from the latest block. This ensures that if a particular transaction is added to the chain, its relevant predecessors (via the `nonce` in the transaction) will have been accepted as valid by most of the nodes in the blockchain.
 
-## Rolling back a block
+## Why Does the Consensus Algorithm Work?
 
-Once a branch is declared invalid, all its block and transactions have to be released.
+Now that we have looked at all the pieces in a blockchain, its worth recapping everything and understanding how the blockchain data structure and and consensus algorithm work together to maintain a consistent view of the ledger across the peer to peer network. Indeed this is a question we raised in the [data structure article](./bc_proto_blockchain_ds.md) and this is a good time to circle back it.
+
+Recall from the data structures article that the blockchain data structure ensures that it is very inexpensive to verify its correctness but very expensive to create and tamper with it in an undetectable way. We claim that this property + the reward mechansim that we desribed above + the algorithm works together to ensure the consistency of the blockchain. 
+
+To begin with, because of the reward mechanism, all the nodes have the incentive to add blocks to the transactions as soon as possible. This ensures that the blockchain is always kept up to date. The main outstanding issue now is how consistency is ensured. We have already considered how this is done when honest nodes disagree on the order of the transactions in the section on forking. So we need to consider what happens when some node wants to tamper with one or more transactions and then wants the rest of the nodes in the blockchain to accept that tampering as the truth.
+
+In this case, as dicussed in [this article](bc_proto_blockchain_ds.md), the tamperer will need to spend a lot of effort to recreate the blocks from the tampered block onward for the tampering to be undetectable. Now the next task for this bad node will be have the new blocks be accepted by the other nodes in the chain. In particular, the tampered blockchain will represent a fork from the tampered blocks onwards. Because of the rule for resolving forks discussed above, the tampering node will need to ensure that its chain also has the highest weight. Which means it will need to keep adding new transactions as new blocks itself, because the other nodes in the blockchain, will have kept adding those same transactions as new blocks to the untampered chain because of the reward incentive.  So this means, roughly speaking that the tamperer would need to have more resources available to it than the honest nodes in the chain to overwhelm the chain and have its tampering be accepted as the truth. This is very challenging if not impossible in a sufficiently large blockchain system. 
+
+The above description is somewhat informal but I hope it gives the reader some intuition about why the consensus algorithm works. Proper formal analysis is challenging, and I recommend the reader consult the research literature on blockhain consensus algorithms for details. Some possible starting points for this are [4, 5].
 
 ## Conclusion
 
-This concludes our presentation of the consensus algorithm. The implementation can be found here.
-
+This concludes our presentation of the consensus algorithm. As the reader may suspect, a real life, full scale implementation of this in a deployed distributed ledger is a Herculean task because of the need to handle different exceptions and corner cases, ensure scalability, security, performance, flexibility, correctness and user-friendliness. This is a vast topic, and the interested reader has many months of exciting study of (a) the vast research literature on blockchain consensus prototocls and (b) source code of established blockchains ahead of them. However, this briefish article should have given them a starting point for further exploration.
 
 ## References
 
@@ -192,3 +195,7 @@ This concludes our presentation of the consensus algorithm. The implementation c
 [2] Lischke, Matthias and Fabian, Benjamin. Analyzing the Bitcoin Network: The First Four Years. _Future Network_, 2016, Volume 8, Issue 7.
 
 [3] Decker, Christian and Wattenhofer, Roger. Information propagation in the bitcoin network. IEEE P2P 2013 Proceedings. 2013, pages 1–10.
+
+[4] Ferdous, Md Sadek and Chowdhury, Mohammad Jabed Morshed and Hoque, Mohammad A. and Colman, Alan. Blockchain Consensus Algorithms: A Survey. arXiv:2001.07091. https://arxiv.org/abs/2001.07091
+
+[5] Garay, Juan A. and Kiayias, Aggelos and Leonardos, Nikos: Full Analysis of Nakamoto Consensus in Bounded-Delay Networks. IACR Cryptol. ePrint Arch. 2020.

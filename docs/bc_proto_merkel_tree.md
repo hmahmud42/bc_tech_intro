@@ -1,12 +1,20 @@
 # Merkel Tree
 
-In [Part 2: Blockchain Datastructure](./bc_proto_blockchain_ds.md) we stored the transactions as a flat string. However, typically a block may contain a large number of transactions and storing them as a flat string can become very inefficient as the blocks, often multiples of them, need to be shared between peers/nodes in the blockchain. Because of this only transactions are stored using a [Merkel tree](https://en.wikipedia.org/wiki/Merkle_tree) data structure which allows you to store a large number of transactions using a single hash - so a massive improvement in storage efficiency - and then download transactions as needed and verify them against the hash stored in the block. These structures are well established and used in many applications, but they are not considered one of the fundamental data structures, so we will spend a bit of time explaining it here.
+## Introduction
+
+In [Blockchain Data Structure](./bc_proto_blockchain_ds.md) we stored the transactions as an array. However, typically a block may contain a large number of transactions and storing them as an array can become very inefficient as the blocks, often large numbers of them, need to be shared between peers/nodes in the blockchain. Because of this transactions are stored using a [Merkel tree](https://en.wikipedia.org/wiki/Merkle_tree) data structure which allows one to represent a large number of transactions using a single hash in such a way that it is possible to verify quickly whether a transaction belongs to set that the Merkel tree represents. This way, the blockchain need only store the Merkel tree hash, and download transacitons in a trusted from some external server as needed. 
+
+## An Example
 
 The merkel tree structure for a set of 8 transactions is given in the figure below and illustrates the basic ideas.
 
-![Merkel Tree](./figures/merkel_tree.png)
+<p align="center">
+  <img src="./figures/merkel_tree.png" />
+</p>
+<figcaption align = "center"><b> Figure: Merkel Tree Example</b></figcaption>
 
-The tree itself consists of the blue boxes and stores the 8 different transactions - the green boxes - via their hashes. The transactions do not form part of the tree. The tree is always a [binary tree](https://en.wikipedia.org/wiki/Binary_tree). Each leaf contains the hash of a single block of data (not to be confused with a blockchain block!) which may be a group of transactions or a single transaction. The hash of any internal node is the hash of the concatenation of hashes of its two children nodes.
+
+The tree itself consists of the grey boxes and stores the 8 different transactions - the blue boxes - via their hashes. The transactions do not form part of the tree. The tree is always a [binary tree](https://en.wikipedia.org/wiki/Binary_tree). Each leaf contains the hash of a single block of data (not to be confused with a blockchain block!) which may be a group of transactions or a single transaction. The hash of any internal node is the hash of the concatenation of hashes of its two children nodes.
 
 The key idea behind using Merkel trees in blockchains (and other applications) is that only the top-hash is stored in a block rather than transactions or even the whole tree itself. When it is required to access a particular transaction, only the data block containing the transaction and the hashes required to prove that it was not corrupted is downloaded from some known, but not necessarily trusted, node and then validated against the top hash. This way we do not need to download the whole tree let alone all the transactions.
 
@@ -19,6 +27,52 @@ For instance, in the example above, if we want to get a transaction from transac
 
 So, stepping back for a moment into the savings in terms of amount of data downloaded, instead of downloading `k` blocks of data, containing all the transactions, we would download `2lg(k)` of hashes and one block of data - a significant saving.
 
-![Merkel Tree Load](./figures/merkel_tree_load.png)
+<p align="center">
+  <img src="./figures/merkel_tree_load.png" />
+</p>
+<figcaption align = "center"><b> Figure: Merkel Tree Load Transaction</b></figcaption>
 
-A simple implementation of Merkel Trees is given in [here](../blockchain_proto/merkel_tree.py). The implementaation used in blockchain platforms are likely to be very different due performance and security considerations.
+
+### Merkel Tree in Our Implementation
+
+Because this is a standard computer science data strucutre, we use this [library](https://pypi.org/project/pymerkle/4.0.0b2/) instead of implementing our own. For the same reason we do not describe this with pseudocode. The implementaation used in blockchain platforms are likely to be very different due performance and security considerations.
+
+## Use in a Blockchain 
+
+Going back to the data structure in the [blockchain article](./bc_proto_blockchain_ds.md), it now looks like the following:
+
+```C
+struct BlockHeader:
+    block_hash: str
+    transactions_hash: str
+    prev_block_hash: str
+    timestamp: DateTime
+    difficulty: nat
+    nonce: str
+
+
+struct Block:
+    block_header: BlockHeader
+    transactions: MerkelTree
+```
+
+the pseudocode for `create_block()` is as follows (showing only the first few lines as the rest remains the same):
+
+```python
+def create_block(transactions: MerkelTree,
+                 prev_block_hash: str,
+                 difficulty: nat) -> Block:
+
+    trans_hash = get_top_hash(transactions)
+    .
+    .
+    .
+    .
+    return Block(new_block_hash, transactions)
+```
+and in the rest of the code we replace `BlockSimple` with `Block` and `get_trans_hash()` is replaced by `get_top_hash()`. The following Figure illustrates the Full block.
+
+<p align="center">
+  <img src="./figures/full_block.png", width=500/>
+</p>
+<figcaption align = "center"><b> Figure: Full block using a Merkel Tree to store transactions.</b></figcaption>

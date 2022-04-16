@@ -14,9 +14,9 @@ In particular, the blockchain data-structure ensures that
 
 **C.** it is computationally cheap to verify that a structure is a valid blockchain data structure.
 
-The full utility of these will not become fully clear until after we have had a chance to study the consensus algorithm. However, right out of the gate we can see that the properties **C** and **B** together imply that once created, it will be very expensive to tamper with a blockchain without getting caught. Indeed, the difficulty can be adjusted as needed and the bigger the ledger is and older the transaction, the more infeasible it becomes.
+The full utility of these will not become fully clear until after we have had a chance to study the consensus algorithm. However, right out of the gate we can see that the properties **C** and **B** together imply that once created, it will be very expensive to tamper with a blockchain without getting caught. Indeed, the difficulty can be adjusted as needed and the bigger the ledger is and older the transaction, the more infeasible it becomes. These properties support the so called [Proof of Work](https://en.wikipedia.org/wiki/Proof_of_work) based conensus algorithm that we will discuss [later](bc_proto_consensus_algorithm.md). The proof of work here refers to the fact that the creation of the block enodes proof that a certain amount of work was carried out when creating the block. 
 
-> Note: In general there are measures of cost other than computational cost that can be used when constructing a blockchain, like reputation or stake in the consistency of the blockchain. These latter are particularly important from, for instance, a sustainbility point of view and we discuss them in [here](final words)
+> Note: In general there are measures of cost other than computational cost that can be used when constructing a blockchain, like reputation or stake in the consistency of the blockchain. These latter are particularly important from, for instance, a sustainbility point of view and we discuss them [here](bc_proto_final_words.md). Consensus algorithms based on that are variously called called Proof of Reuputation or Proof of Stake based consensus. 
 
 At a high level, the blockchain is a [linked list](https://en.wikipedia.org/wiki/Linked_list) where each item in the list is _block_ and the links have some constraints that depend on the contents of the block. In the following we first describe what is contained in each block and then describe how these blocks are chained together. Along the way, we use python-like pseudo-code to make the ideas concrete, and refer to python implementations of the same ideas for detailed self-study later on.
 
@@ -56,7 +56,7 @@ struct BlockHeader:
     nonce: str
 
 
-struct Block:
+struct BlockSimple:
     block_header: BlockHeader
     transactions: [str]
 ```
@@ -87,7 +87,7 @@ def create_block(transactions: [str],
                                    timestamp,
                                    difficulty,
                                    nonce)
-    return Block(new_block_hash, transactions)
+    return BlockSimple(new_block_hash, transactions)
 ```
 The `create_block()` expects the list of transactions, the hash of the previous block, and the difficulty level as inputs. The previous block hash will be some fixed string if the block is the first in the chain. 
 
@@ -114,7 +114,10 @@ def solve_block_puzzle(trans_hash: str,
                                 )
     return solve_puzzle(puzzle_string, difficulty)
 ```
-The first line of the `solve_block_puzzle()` creates a _puzzle string_ which is a concatenatation of the transactions hash, the previous block hash and the timestamp converted to a string. The second line then calls the function defined [here](./bc_proto_prelim.md#cryptographic-puzzles) to get the solution to the the puzzle string. Some authors call the puzzle string the _preliminary block header_ which to me seems like incorrect terminology. Regardless, _this puzzle string will form the basis of guranteeing that propreties **A** - **C** are maintained_. This process is illustrated in Figure: _Create Nonce_.
+The first line of the `solve_block_puzzle()` creates a _puzzle string_ which is a concatenatation of the transactions hash, the previous block hash and the timestamp converted to a string. The second line then calls the function defined [here](./bc_proto_prelim.md#cryptographic-puzzles) to get the solution to the the puzzle string. Some authors call the puzzle string the _preliminary block header_ which to me seems like incorrect terminology. Regardless, _this puzzle string will form the basis of guranteeing that propreties **A** - **C** are maintained_. 
+> Hence, this step is the **proof of work** that is created when creating a block. This is also what is meant by **mining a block**, a term which you likely have read/heard about often
+
+This process is illustrated in Figure: _Create Nonce_.
 
 <p align="center">
   <img src="figures/create_nonce.png" />
@@ -167,8 +170,8 @@ The blockchain data structure conists of
 This is illustrated in the pseudocode below.
 ```C
 struct Blockchain:
-    latest_block_hash: Block
-    block_hash_to_block_map: dictionary
+    latest_block_hash: str
+    block_hash_to_block_map: dictionary{str -> BlockSimple}
     current_transactions: [str]
     trans_per_block: const nat
     difficulty_level: nat
@@ -190,10 +193,10 @@ def init_blockchain(trans_per_block: nat, difficulty_level: nat):
 A new block is added to the chain as part of adding a new transaction to the blockchain. The pseudocode below describes this.
 
 ```python
-def add_transaction(bc: Blockchain, transaction: str):
+def add_transaction(bc: Blockchain, transaction: str) -> BlockSimple:
     append(bc.transaction_list, transaction)
     if length(bc.transaction_list) < bc.trans_per_block:
-        return bc
+        return NULL
 
     # bc.transaction_list == bc.trans_per_block t
     # time to create a new block
@@ -204,7 +207,8 @@ def add_transaction(bc: Blockchain, transaction: str):
                              bc.difficulty)
     bc.block_hash_to_block_map[new_block.block_hash] = new_block
     bc.latest_block_hash = new_block.block_hash
-    bc.current_transactions = []
+    bc.transaction_list = []
+    return new_block
 ```
 The pseudocode for adding transactions is very simple. The transaction is first added to the the blockchain list of transactions. After that if the length of the the current transaction list is equal to the `trans_per_block` parameter, a new block is added. 
 

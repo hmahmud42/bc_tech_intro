@@ -58,3 +58,6 @@ The following shows some strings and the corresponding nonces using the SHA256 f
 "Hello World" 135
 "Quick Brown Fox" 29
 ```
+
+We note here that solving a computationally expensive puzzle is often referred to as **mining** or creating a **proof of work** in the context of blockchains - terms you have heard about often. 
+
