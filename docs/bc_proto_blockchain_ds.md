@@ -174,7 +174,7 @@ struct Blockchain:
     block_hash_to_block_map: dictionary{str -> BlockSimple}
     current_transactions: [str]
     trans_per_block: const nat
-    difficulty_level: nat
+    difficulty: nat
 
 ```
 The length of `current_transactions` must always be less than `trans_per_block`.
@@ -194,8 +194,8 @@ A new block is added to the chain as part of adding a new transaction to the blo
 
 ```python
 def add_transaction(bc: Blockchain, transaction: str) -> BlockSimple:
-    append(bc.transaction_list, transaction)
-    if length(bc.transaction_list) < bc.trans_per_block:
+    append(bc.current_transactions, transaction)
+    if length(bc.current_transactions) < bc.trans_per_block:
         return NULL
 
     # bc.transaction_list == bc.trans_per_block t
@@ -203,10 +203,10 @@ def add_transaction(bc: Blockchain, transaction: str) -> BlockSimple:
     
     # create the intermediate header for the new block
     new_block = create_block(bc.current_transactions, 
-                             bc.last_block_hash, 
+                             bc.latest_block_hash, 
                              bc.difficulty)
-    bc.block_hash_to_block_map[new_block.block_hash] = new_block
-    bc.latest_block_hash = new_block.block_hash
+    bc.block_hash_to_block_map[new_block.block_header.block_hash] = new_block
+    bc.latest_block_hash = new_block.block_header.block_hash
     bc.transaction_list = []
     return new_block
 ```
