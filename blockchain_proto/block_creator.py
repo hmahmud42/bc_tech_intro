@@ -2,7 +2,7 @@
 Miscellaneous function for creating blocks.
 """
 from datetime import datetime
-from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle
+from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle, check_solution
 from blockchain_proto.transaction import Transaction
 from blockchain_proto.blockchain_ds import BlockSimple, BlockHeader
 
@@ -104,5 +104,31 @@ def create_block(transactions: [Transaction],
                                     nonce)
 
     return BlockSimple(new_block_header, transactions)
+
+
+def validate_block_hashes(block: BlockSimple):
+    """
+    Makes sure that the block puzzle was solved correctly.
+    """
+    trans_hash = Transaction.get_trans_hash(block.transactions)
+    puzzle_string = concat_strs([trans_hash,
+                                block.block_header.prev_block_hash,
+                                str(block.block_header.timestamp),
+                                str(block.block_header.difficulty)])
+    block_hash = create_block_hash(trans_hash,
+                                   block.block_header.prev_block_hash,
+                                   block.block_header.timestamp,
+                                   block.block_header.difficulty,
+                                   block.block_header.nonce)
+    if block_hash != block.block_header.block_hash:
+        raise ValueError(f"Invalid block: block-hash in block header is {block.block_header.block_hash}"
+                         f" block hash calculated is {block_hash}.")
+
+    if not check_solution(puzzle_string, block.block_header.nonce, block.block_header.difficulty):
+        raise ValueError(f"Invalid block: invalid puzzle solution {block.block_header.nonce}"
+                         f" for puzzle {puzzle_string} at difficulty {block.block_header.difficulty}.")
+
+
+
 
 

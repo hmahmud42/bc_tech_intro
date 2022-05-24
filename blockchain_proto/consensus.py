@@ -3,6 +3,7 @@ Implements the consensus algorithm for a single node.
 """
 from blockchain_proto.blockchain_ds import BlockChain
 
+
 def blockhain_consensus(bc: Blockchain,
                         ext_trans: Queue<str>,
                         node_trans: Queue<str>,

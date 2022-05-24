@@ -205,7 +205,7 @@ def add_transaction(bc: Blockchain, transaction: str) -> BlockSimple:
     new_block = create_block(bc.current_transactions, 
                              bc.latest_block_hash, 
                              bc.difficulty)
-    bc.block_hash_to_block_map[new_block.block_header.block_hash] = new_block
+    bc.block_map[new_block.block_header.block_hash] = new_block
     bc.latest_block_hash = new_block.block_header.block_hash
     bc.transaction_list = []
     return new_block
@@ -275,7 +275,7 @@ def validate_chain(bc: Blockchain) -> (Bool, str):
 
     while next_block_hash !=  NULL:
 
-        block = bc.block_hash_to_block_map[next_block_hash]
+        block = bc.block_map[next_block_hash]
         if block is NULL:
             error_message = "Block not found for block hash: " + next_block_hash
             return (False, error_message)
