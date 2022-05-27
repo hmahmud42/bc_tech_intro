@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from blockchain_proto.block_creator import validate_block_hashes
 from blockchain_proto.blockchain_ds import BlockSimple
-from blockchain_proto.transaction import Transaction
+from blockchain_proto.transaction import Transaction, TransactionManager
 
 from blockchain_proto.consts import NULL_BLOCK_HASH
 
@@ -33,14 +33,24 @@ class Fork:
     user_trans_dict: dict
         Dictionary mapping each user_id to the trans_no for the
         latest transaction for that user.
+
+    fork_start_block_hash: str:
+        Block hash of the first block in the fork off of the previous trunk
     """
-    def __init__(self, fork_id: int, block_hash: str,
-                 timestamp: datetime, num_blocks:int, user_trans_dict:dict):
+    def __init__(self,
+                 fork_id: int,
+                 block_hash: str,
+                 timestamp: datetime,
+                 num_blocks:int,
+                 user_trans_dict:dict,
+                 fork_start_block_hash: dict):
         self.fork_id  = fork_id
         self.block_hash = block_hash
         self.timestamp = timestamp
         self.num_blocks = num_blocks
         self.user_trans_dict = user_trans_dict
+        self.fork_start_block_hash = fork_start_block_hash
+
 
 class ForkManager:
     """
@@ -50,14 +60,16 @@ class ForkManager:
     was added to.
     """
     def __init__(self):
-        self.last_fork = 1
+        self.last_fork_id = 1
         self.longest_fork = None
         self.forks = {}
         self.fork_hashes = {}
+        self.fork_len_disc = 6
+        self.block_depth_map = {}
 
     def longest_fork(self) -> Fork:
         """
-        Retunrs the longest fork.
+        Returns the longest fork.
 
         Return
         ------
@@ -65,6 +77,20 @@ class ForkManager:
             The longest fork.
         """
         return self.longest_fork
+
+    def update_block_depths(self, blocks_added: [BlockSimple]):
+        """
+        Updates the depth of the blocks based on their previous blocks.
+
+        blocks_added: [BlockSimple]
+            The list of blocks, in order, to update depths for.
+        """
+        for block in blocks_added:
+            if block.block_header.prev_block_hash != NULL_BLOCK_HASH:
+                self.block_depth_map[block.block_header.block_hash] = \
+                    self.block_depth_map[block.block_header.prev_block_hash] + 1
+            else:
+                self.block_depth_map[block.block_header.block_hash] = 1
 
     def update(self, fork: Fork, blocks_added: [BlockSimple]) -> None:
         """
@@ -84,17 +110,23 @@ class ForkManager:
                              f"blockhash {fork.block_hash} "
                              f"requested to be updated"
                              f"but fork not in dictionary.")
+        self.update_block_depths(blocks_added)
+
         if not fork:
-            self.last_fork += 1
-            fork = Fork(self.last_fork, "", None, 0, defaultdict(lambda : 0))
+            self.last_fork_id += 1
+            fork = Fork(fork_id=self.last_fork_id,
+                        block_hash=blocks_added[-1].block_header.block_hash,
+                        timestamp=blocks_added[-1].block_header.timestamp,
+                        num_blocks=self.block_depth_map[blocks_added[0].block_header.block_hash] + len(blocks_added),
+                        user_trans_dict=defaultdict(lambda : 0),
+                        fork_start_block_hash=blocks_added[0].block_header.block_hash)
             self.forks[fork.fork_id] = fork
             prev_hash = None
         else:
             prev_hash = fork.block_hash
-
-        fork.block_hash = blocks_added[-1].block_header.block_hash
-        fork.timestamp = blocks_added[-1].block_header.timestamp
-        fork.num_blocks += len(blocks_added)
+            fork.block_hash = blocks_added[-1].block_header.block_hash
+            fork.timestamp = blocks_added[-1].block_header.timestamp
+            fork.num_blocks += len(blocks_added)
 
         # assumes transactions within a block are ordered
         # by trans_no for each user_id
@@ -190,3 +222,33 @@ class ForkManager:
                                  f"hash {block.block_header.block_hash}" +
                                  f"is {tns[0]} while latest transaction in local chain " +
                                  f"is  {fork.user_trans_dict[user_id]}.")
+
+    def cleanup_forks(self, block_map) -> [str]:
+        """
+        Drop any fork that is more than 6 blocks shorter than the longest block,
+        and release the transactions in the block to be added to the transaction
+        manager.
+        """
+        block_hashes_released = []
+        for fork in self.forks.items():
+            if fork.num_blocks >= self.longest_fork.num_blocks - 6:
+                continue
+
+            cur_block = block_map[fork.block_hash]
+            block_hashes_released.append(fork.block_hash)
+            del self.block_depth_map[cur_block.block_header.block_hash]
+            while cur_block.block_header.block_hash != fork.fork_start_block_hash:
+                cur_block = block_map(cur_block.block_header.prev_block_hash)
+                block_hashes_released.append(cur_block.block_header.block_hash)
+                del self.block_depth_map[cur_block.block_header.block_hash]
+
+            del self.forks[fork.fork_id]
+            del self.fork_hashes[fork.block_hash]
+
+        return block_hashes_released
+
+
+
+
+
+

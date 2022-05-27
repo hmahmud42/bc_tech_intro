@@ -51,10 +51,10 @@ class BlockChain(object):
     def __init__(self, trans_per_block: int, difficulty: int) -> None:
         self.trans_per_block = trans_per_block
         self.difficulty = difficulty
-        self.latest_block_hashes = [] # this is a list - one for each fork.
+        # self.latest_block_hashes = [] # this is a list - one for each fork.
         self.fork_lengths = []
         self.block_map = {}
-        self.current_transactions = []
+        # self.current_transactions = []
         self.trans_dict = {}
         self.trans_manager = TransactionManager()
         self.fork_manager = ForkManager()
@@ -81,7 +81,7 @@ class BlockChain(object):
         """
         self.trans_manager.add_transaction(transaction)
         if len(self.trans_dict) < self.trans_per_block: return None
-
+        self.cleanup()
         longest_fork = self.fork_manager.longest_fork()
         valid_trans = self.trans_manager.get_valid_trans(longest_fork.user_trans_dict if longest_fork else {})
         if len(valid_trans) < self.trans_per_block: return None
@@ -120,7 +120,7 @@ class BlockChain(object):
             blocks_added.append(new_block)
 
         self.fork_manager.update(fork, blocks_added)
-        self.trans_manager.remove_trans(trans_to_remove)
+        self.trans_manager.remove_older_and_equal_trans(trans_to_remove)
         return blocks_added[-1]
 
     def add_incoming_block(self, incoming_block: BlockSimple) -> Union[BlockSimple, str]:
@@ -150,3 +150,17 @@ class BlockChain(object):
 
         self.fork_manager.update(fork, [incoming_block])
         return incoming_block
+
+    def cleanup(self):
+        """
+        Cleans up the blockchain by removing any fork that has become too
+        short compared to the longest fork and moves all its transactions into
+        the list of transactions that can be added.
+        """
+        released_block_hashes = self.fork_manager.cleanup_forks(self.block_map)
+        for block_hash in released_block_hashes:
+            block = self.block_map[block_hash]
+            for trans in block.transactions:
+                self.trans_manager.add_transaction(trans)
+
+            del self.block_map[block_hash]
