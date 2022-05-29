@@ -7,6 +7,7 @@ from datetime import datetime
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from blockchain_proto.block_creator import *
 from blockchain_proto.fork_manager import ForkManager, Fork
+from blockchain_proto.consts import *
 
 
 class BlockHeader(object):
@@ -25,6 +26,25 @@ class BlockHeader(object):
         self.difficulty = difficulty
         self.nonce = nonce
 
+    def to_json(self):
+        """
+        Returns json version of this BlockHeader
+
+        Returns
+        -------
+        dict:
+            json representation of the the block-header
+        """
+        return {
+            BLOCK_HASH: self.block_hash,
+            TRANS_HASH: self.transactions_hash,
+            PREV_BLOCK_HASH: self.prev_block_hash,
+            TIMESTAMP: self.timestamp,
+            DIFF: self.difficulty,
+            NONCE: self.nonce
+        }
+
+
 
 class BlockSimple(object):
 
@@ -33,6 +53,20 @@ class BlockSimple(object):
                  transactions: [Transaction]) -> None:
         self.block_header = block_header
         self.transactions = transactions
+
+    def to_json(self):
+        """
+        Returns json version of this BlockSimple
+
+        Returns
+        -------
+        dict:
+            json representation of the the block
+        """
+        return {
+            BLOCK_HEADER: self.block_header.to_json(),
+            BLOCK_TRANS: [trans.to_json() for trans in self.transactions]
+        }
 
 
 class BlockChain(object):
@@ -59,7 +93,7 @@ class BlockChain(object):
         self.trans_manager = TransactionManager()
         self.fork_manager = ForkManager()
 
-    def add_transaction(self, transaction: Transaction) -> Union[BlockSimple, str, None]:
+    def add_transaction(self, transaction: Transaction) -> Union[[BlockSimple], None]:
         """
         Adds a transaction after validating it, and returns a new block if
         created. If transaction validation fails, it returns the error message (to
@@ -87,7 +121,7 @@ class BlockChain(object):
         if len(valid_trans) < self.trans_per_block: return None
         return self.add_new_blocks(valid_trans, longest_fork)
 
-    def add_new_blocks(self, valid_trans:[Transaction], fork: Fork) -> BlockSimple:
+    def add_new_blocks(self, valid_trans:[Transaction], fork: Fork) -> [BlockSimple]:
         """
         Create and add new blocks using the valid transactions to the given form.
 
@@ -102,8 +136,8 @@ class BlockChain(object):
 
         Returns
         -------
-        BlockSimple:
-            The latest block added.
+        [BlockSimple]:
+            All the blocks added
         """
         trans_to_remove = []
         latest_block_hash = fork.block_hash if fork else NULL_BLOCK_HASH
@@ -121,7 +155,7 @@ class BlockChain(object):
 
         self.fork_manager.update(fork, blocks_added)
         self.trans_manager.remove_older_and_equal_trans(trans_to_remove)
-        return blocks_added[-1]
+        return blocks_added
 
     def add_incoming_block(self, incoming_block: BlockSimple) -> Union[BlockSimple, str]:
         """
@@ -143,6 +177,8 @@ class BlockChain(object):
         BlockSimple | str:
             As described in the function description.
         """
+        if incoming_block.block_header.block_hash in self.block_map:
+            raise ValueError(f"Block with has {incoming_block.block_header.block_hash} was already added.")
         try:
             fork = self.fork_manager.validate_incoming_block(incoming_block)
         except ValueError as v:
@@ -164,3 +200,26 @@ class BlockChain(object):
                 self.trans_manager.add_transaction(trans)
 
             del self.block_map[block_hash]
+
+    def to_json(self):
+        """
+        Returns json version of this BlockChain
+
+        Returns
+        -------
+        dict:
+            json representation of the the block chain.
+        """
+        pass
+
+    def get_blocks_newer(self, timestamp):
+        """
+        Returns blockchains which are newer than the given timestamp.
+        """
+        pass
+
+    def get_trans_not_added(self, timestamp):
+        """
+        Returns transactions which have not been added so far.
+        """
+        pass

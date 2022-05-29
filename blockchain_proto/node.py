@@ -2,12 +2,11 @@ import pickle
 import threading
 import zmq
 import argparse
-from blockchain_proto.fork_manager import AuthManager
-from blockchain_proto.transaction import TransactionManager
 
-
-TRANS_GOS = b'transaction'
-BLOCK_GOS = b'block'
+from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
+    INTERFACE_MSG_TYPE, GET_ALL, GET_BLOCK, GET_TRANS_NOT_ADDED, TIMESTAMP_BOUND
+from blockchain_proto.blockchain_ds import BlockChain
+from blockchain_proto.local_web_server import run_webserver
 
 
 class Node(object):
@@ -31,13 +30,12 @@ class Node(object):
         self.node_response_socket.bind(self.publish_address)
 
         self.gossip_receive_socket = context.socket(zmq.SUBSCRIBE)
-        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, TRANS_GOS)
-        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, BLOCK_GOS)
+        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, TRANS_GOSSIP)
+        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, BLOCK_GOSSIP)
 
         self.peers_info = None
 
-        self.auth_manager = AuthManager()
-        self.bc = Blockchain(args.trans_per_block, args.difficulty)
+        self.bc = BlockChain(args.trans_per_block, args.difficulty)
         self.add_self_to_registry()
 
     def add_self_to_registry(self):
@@ -68,7 +66,11 @@ class Node(object):
         register_socket.close()
 
     def run_bc_server(self):
-
+        """
+        Runs the blockchain server by handling messages from the local
+        interface, direct messages from other nodes and messages
+        gossiped from other nodes.
+        """
         poller = zmq.Poller()
         poller.register(self.local_interface_router, zmq.POLLIN)
         poller.register(self.node_response_socket, zmq.POLLIN)
@@ -125,50 +127,37 @@ class Node(object):
         self.gossip_send_socket.send_multipart([obj_type, pickle.dumps(obj)])
 
     def handle_local_interface_request(self, json_msg):
+        if json_msg[INTERFACE_MSG_TYPE] == GET_ALL:
+            return self.bc.to_json()
 
-        if json_msg['type'] == GET_LATEST_BLOCK:
+        if json_msg[INTERFACE_MSG_TYPE] == GET_BLOCK:
+            return self.bc.get_blocks_newer(json_msg[TIMESTAMP_BOUND])
 
-
-
-        # get message type
-        # new transaction for user
-        # if transaciton number is fine, accept it
-        # return transaction
-        # accepted
-        # gossip
-        # transaction
-        # # get current blockchain
-        # return json
-        # version
-        # of
-        # current
-        # chain
+        if json_msg[INTERFACE_MSG_TYPE] == GET_TRANS_NOT_ADDED:
+            return self.bc.get_trans_not_added(json_msg[TIMESTAMP_BOUND])
 
     def handle_gossiped_message(self, msg):
 
-        if msg[0] == b'transaction':
+        if msg[0] == TRANS_GOSSIP:
             trans = pickle.loads(msg[1])
-            self.auth_manager.validate_incoming_transaction(trans)
-            self.bc.add_transaction(trans)
+            try:
+                blocks_added = self.bc.add_transaction(trans)
+                self.gossip_object(TRANS_GOSSIP, pickle.dumps(trans))
+                if blocks_added is not None:
+                    for block in blocks_added:
+                        self.gossip_object(BLOCK_GOSSIP, pickle.dumps(block))
+            except ValueError as v:
+                # This means transaction was previously added - so do nothing
+                pass
 
-        elif msg[0] == b'block':
-            block = pickl.load(msg[1])
-            self.bc.add_block()
-
-        # if message type is transaciton
-        # add_transaction
-        # gossip
-        # transaciton
-        # if transaction added,
-        # gosip
-        # transaction
-
-        # if message type is block:
-            # validate and add
-            # blcok
-            # if block added
-            # gossip
-            # block
+        elif msg[0] == BLOCK_GOSSIP:
+            block = pickle.load(msg[1])
+            try:
+                self.bc.add_incoming_block(block)
+                self.gossip_object(BLOCK_GOSSIP, pickle.dumps(block))
+            except ValueError as v:
+                # This means block was previously added
+                pass
 
 
 def parseargs():
@@ -201,9 +190,9 @@ def parseargs():
 def run():
     args = parseargs()
     context = zmq.Context()
-    threading.Thread(target=lambda: run_bc_server(args, context)).start()
+    node = Node(args, context)
+    threading.Thread(target=lambda: node.run_bc_server()).start()
     threading.Thread(target=lambda: run_webserver(args, context)).start()
-    # threading.Thread(target=lambda: serve(app, host=host_name, port=port)).start()
 
 
 if __name__ == "__main__":

@@ -1,1 +1,25 @@
 NULL_BLOCK_HASH = "NULL-BLOCK-HASH"
+TRANS_GOSSIP = b'transaction'
+BLOCK_GOSSIP = b'block'
+
+USER_ID = 'user_id'
+TRANS_NO = 'trans_no'
+TRANS_STR = 'trans_str'
+
+TRANS_NOT_YET_ADDED = 'transactions_not_yet_added'
+
+BLOCK_HASH = 'block_hash'
+TRANS_HASH = 'transactions_hash'
+PREV_BLOCK_HASH = 'prev_block_hash'
+TIMESTAMP = 'timestamp'
+DIFF = 'difficulty'
+NONCE = 'nonce'
+
+BLOCK_HEADER = 'block_header'
+BLOCK_TRANS = 'block_trans'
+
+INTERFACE_MSG_TYPE = 'msg_type'
+GET_ALL = 'get_all'
+GET_BLOCK = 'get_blocks'
+GET_TRANS_NOT_ADDED = 'get_trans_not_added'
+TIMESTAMP_BOUND = 'timestamp_bound'

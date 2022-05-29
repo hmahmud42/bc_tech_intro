@@ -246,9 +246,3 @@ class ForkManager:
             del self.fork_hashes[fork.block_hash]
 
         return block_hashes_released
-
-
-
-
-
-

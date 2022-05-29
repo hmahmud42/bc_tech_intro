@@ -127,8 +127,3 @@ def validate_block_hashes(block: BlockSimple):
     if not check_solution(puzzle_string, block.block_header.nonce, block.block_header.difficulty):
         raise ValueError(f"Invalid block: invalid puzzle solution {block.block_header.nonce}"
                          f" for puzzle {puzzle_string} at difficulty {block.block_header.difficulty}.")
-
-
-
-
-

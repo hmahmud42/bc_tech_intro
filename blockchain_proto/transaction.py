@@ -4,7 +4,7 @@ Contains class related to transactions.
 from collections import defaultdict
 import numpy as np
 from blockchain_proto.puzzle import concat_strs, sha_256_hash_string
-
+from blockchain_proto.consts import *
 
 
 class Transaction(object):
@@ -43,6 +43,17 @@ class Transaction(object):
             return False
         return self.user_id == other.user_id and self.trans_no == other.trans_no
 
+    def to_json(self):
+        """
+        Returns a json representation of of this transaction.
+
+        Returns
+        -------
+        dict:
+            Json version of this transaction.
+        """
+        return {USER_ID: self.user_id, TRANS_NO: self.trans_no, TRANS_STR: trans_str}
+
     @staticmethod
     def get_trans_hash(trans_list):
         return sha_256_hash_string(concat_strs([str(t) for t in trans_list]))
@@ -54,12 +65,32 @@ class TransactionManager:
     yet been added to any block in any fork.
     """
     def __init__(self):
-        self.user_trans_map = defaultdict(lambda : [])
+        self.user_curr_trans = defaultdict(lambda : [])
+        self.user_curr_trans_no = defaultdict(lambda : [])
+        self.user_max_trans = defaultdict(lambda : 0)
+
         self.num_trans = 0
 
-    def add_transaction(self, trans: Transaction)  -> None:
-        self.user_trans_map[trans.user_id].append(trans)
+    def add_transaction(self, trans: Transaction):
+        """
+        Adds a transaction to the list of transactions not yet added
+        and creates a new block(s) if there are sufficiently many new
+        transactions. Raises a ValueError if the transaction was added
+        before.
+
+        Parameters
+        ----------
+        trans: Transaction
+            The transaction to add.
+        """
+        if (trans.user_id in self.user_max_trans and
+                trans.trans_no <= self.user_max_trans[trans.user_id]) or \
+                trans.user_id in self.user_curr_trans_no:
+            raise ValueError(f"Transaction User: {trans.user_id}, no. : {trans.trans_no} was already added.")
+        self.user_curr_trans[trans.user_id].append(trans)
+        self.user_curr_trans_no[trans.user_id].append(trans.trans_no)
         self.num_trans += 1
+        return True
 
     def __len__(self) -> int:
         return self.num_trans
@@ -83,8 +114,8 @@ class TransactionManager:
             be in sequence within the fork.
         """
         ret_trans = []
-        for user_id in self.user_trans_map:
-            all_trans = self.user_trans_map[user_id]
+        for user_id in self.user_curr_trans:
+            all_trans = self.user_curr_trans[user_id]
             all_trans = sorted(all_trans)
             all_trans_no = np.array([trans.trans_no for trans in all_trans])
             if user_id not in last_trans_dict:
@@ -119,19 +150,43 @@ class TransactionManager:
             all the transactions are assumed to have contiguous trans_no.
         """
         first_trans = {}
+        user_trans_no_dict = defaultdict(lambda : [])
         # remove transactions in the list
         for trans in sorted_trans_list:
             try:
                 if trans.user_id not in first_trans:
                     first_trans[trans.user_id] = trans.trans_no
-                self.user_trans_map[trans.user_id].remove(trans)
+                self.user_curr_trans[trans.user_id].remove(trans)
+                self.user_curr_trans_no[trans.user_id].remove(trans)
                 self.num_trans -= 1
+                user_trans_no_dict[trans.user_id].append(trans.trans_no)
             except Exception as e:
                 print(e)
 
+        for user_id in user_trans_no_dict:
+            self.user_max_trans[user_id] = max(user_trans_no_dict[user_id])
+
         # remove all older transactions
         for user_id in first_trans:
-            old_len = len(self.user_trans_map[user_id])
-            self.user_trans_map[user_id] = list(filter(lambda t: t.trans_no <= first_trans[user_id],
-                                                       self.user_trans_map[user_id]))
-            self.num_trans -= old_len - len(self.user_trans_map[user_id])
+            old_len = len(self.user_curr_trans[user_id])
+            self.user_curr_trans[user_id] = list(filter(lambda t: t.trans_no <= first_trans[user_id],
+                                                        self.user_curr_trans[user_id]))
+            self.user_curr_trans_no[user_id] = list(filter(lambda t: t <= first_trans[user_id],
+                                                           self.user_curr_trans_no[user_id]))
+            self.num_trans -= old_len - len(self.user_curr_trans[user_id])
+
+    def to_json(self):
+        """
+        Returns a json representation of of the data in the transaction manager.
+
+        Returns
+        -------
+        dict:
+            Json version of this transaction.
+        """
+        return {TRANS_NOT_YET_ADDED:
+                    {
+                        user_id:  [trans.to_json() for trans in self.user_curr_trans[user_id]]
+                        for user_id in self.user_curr_trans
+                     }
+                }
