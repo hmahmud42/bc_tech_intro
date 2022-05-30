@@ -7,7 +7,7 @@ from blockchain_proto.block_creator import validate_block_hashes
 from blockchain_proto.blockchain_ds import BlockSimple
 from blockchain_proto.transaction import Transaction, TransactionManager
 
-from blockchain_proto.consts import NULL_BLOCK_HASH
+from blockchain_proto.consts import *
 
 
 class Fork:
@@ -50,7 +50,25 @@ class Fork:
         self.num_blocks = num_blocks
         self.user_trans_dict = user_trans_dict
         self.fork_start_block_hash = fork_start_block_hash
-
+        
+    def to_json(self) -> dict:
+        """
+        Returns the json version of this fork.
+        
+        Returns
+        -------
+        dict:
+            Json of this fork.
+        """
+        return {        
+           FORK_ID: self.fork_id,
+           BLOCK_HASH: self.block_hash,
+           TIMESTAMP: self.timestamp,
+           NUM_BLOCKS: self.num_blocks,
+           USER_TRANS_DICT: self.user_trans_dict,
+           FORK_START_BLOCK_HASH: self.fork_start_block_hash
+        }        
+        
 
 class ForkManager:
     """
@@ -246,3 +264,18 @@ class ForkManager:
             del self.fork_hashes[fork.block_hash]
 
         return block_hashes_released
+
+    def to_json(self) -> dict:
+        """
+        Returns a json version of the data in this fork
+        manager useful for a user.
+
+        Returns
+        -------
+        dict:
+            Json version of this fork manager useful for a human user.
+        """
+        return {
+            LONGEST_FORK_ID: self.longest_fork.fork_id,
+            FORKS: {fork_id: fork.to_json for fork, fork_id in self.forks.items()}
+        }

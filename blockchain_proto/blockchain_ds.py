@@ -210,16 +210,27 @@ class BlockChain(object):
         dict:
             json representation of the the block chain.
         """
-        pass
+        return {
+            TRANS_PER_BLOCK: self.trans_per_block,
+            DIFFICULTY: self.difficulty,
+            BLOCK_MAP: {block_hash: block.to_json() for block_hash, block in self.block_map.items()},
+            TRANS_DATA: self.trans_manager.to_json(),
+            FORK_DATA: self.fork_manager.to_json()
+        }
 
-    def get_blocks_newer(self, timestamp):
+
+    def get_blocks_newer_json(self, timestamp):
         """
         Returns blockchains which are newer than the given timestamp.
         """
-        pass
+        return {
+            block_hash: block.to_json() for block_hash, block in self.block_map.items()
+                        if block.block_header.timestamp >= timestamp
 
-    def get_trans_not_added(self, timestamp):
+        }
+
+    def get_trans_not_added_json(self):
         """
         Returns transactions which have not been added so far.
         """
-        pass
+        return self.trans_manager.to_json()

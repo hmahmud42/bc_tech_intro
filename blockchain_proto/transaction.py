@@ -2,6 +2,7 @@
 Contains class related to transactions.
 """
 from collections import defaultdict
+from datetime import datetime
 import numpy as np
 from blockchain_proto.puzzle import concat_strs, sha_256_hash_string
 from blockchain_proto.consts import *

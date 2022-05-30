@@ -1,7 +1,11 @@
+"""
+Implements a node in the blockchain
+"""
 import pickle
 import threading
 import zmq
 import argparse
+from dateutil.parser import parse
 
 from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
     INTERFACE_MSG_TYPE, GET_ALL, GET_BLOCK, GET_TRANS_NOT_ADDED, TIMESTAMP_BOUND
@@ -127,17 +131,45 @@ class Node(object):
         self.gossip_send_socket.send_multipart([obj_type, pickle.dumps(obj)])
 
     def handle_local_interface_request(self, json_msg):
+        """
+        Handles information request from the local webserver showing blockchain
+        information to the local user. The information requested can be one of:
+        all the data in the block, blocks with timestamp more recent than a
+        given timestamp, all the transactions that have not been added so far.
+
+        Parameters
+        ----------
+        json_msg: dict
+            The json message with information request.
+
+        Returns
+        -------
+        dict:
+            The information requested in json format.
+        """
         if json_msg[INTERFACE_MSG_TYPE] == GET_ALL:
             return self.bc.to_json()
 
         if json_msg[INTERFACE_MSG_TYPE] == GET_BLOCK:
-            return self.bc.get_blocks_newer(json_msg[TIMESTAMP_BOUND])
+            return self.bc.get_blocks_newer_json(parse(json_msg[TIMESTAMP_BOUND]))
 
         if json_msg[INTERFACE_MSG_TYPE] == GET_TRANS_NOT_ADDED:
-            return self.bc.get_trans_not_added(json_msg[TIMESTAMP_BOUND])
+            return self.bc.get_trans_not_added_json()
 
-    def handle_gossiped_message(self, msg):
+    def handle_gossiped_message(self, msg: [bytes]):
+        """
+        Handles messages gossiped from a local node.
 
+        Parameters
+        ----------
+        msg: [bytes]
+            Messages gossiped from a other nodes.
+
+        Returns
+        -------
+        dict:
+            The information requested in json format.
+        """
         if msg[0] == TRANS_GOSSIP:
             trans = pickle.loads(msg[1])
             try:
