@@ -73,5 +73,5 @@ def check_solution(s: str, nonce: str , d: int) -> bool:
     bool: 
         True if the nonce is a solution, Fals otherwise
     """
-    prefix = '0' *  d # a string with d 0s
+    prefix = '0' * d # a string with d 0s
     return sha_256_hash_string(s + str(nonce))[0:d] == prefix

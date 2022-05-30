@@ -218,7 +218,6 @@ class BlockChain(object):
             FORK_DATA: self.fork_manager.to_json()
         }
 
-
     def get_blocks_newer_json(self, timestamp):
         """
         Returns blockchains which are newer than the given timestamp.
