@@ -4,7 +4,7 @@ Authorization manager for transactions.
 from collections import defaultdict
 from datetime import datetime
 from blockchain_proto.block_creator import validate_block_hashes
-from blockchain_proto.blockchain_ds import BlockSimple
+from blockchain_proto.block_simple import BlockSimple
 from blockchain_proto.transaction import Transaction, TransactionManager
 
 from blockchain_proto.consts import *

@@ -4,7 +4,7 @@ Miscellaneous function for creating blocks.
 from datetime import datetime
 from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle, check_solution
 from blockchain_proto.transaction import Transaction
-from blockchain_proto.blockchain_ds import BlockSimple, BlockHeader
+from blockchain_proto.block_simple import BlockHeader, BlockSimple
 
 
 def create_block_hash(trans_hash: str,
@@ -38,11 +38,11 @@ def create_block_hash(trans_hash: str,
     str:
         The block hash created using SHA256.
     """
-    block_data_string = concat_strs([trans_hash,
-                                     prev_block_hash,
-                                     str(timestamp),
-                                     str(difficulty),
-                                     nonce])
+    block_data_string = "".join([trans_hash,
+                                 prev_block_hash,
+                                 str(timestamp),
+                                 str(difficulty),
+                                 nonce])
     return sha_256_hash_string(block_data_string)
 
 
@@ -74,10 +74,10 @@ def solve_block_puzzle(trans_hash: str,
     str:
         The solution to the puzzle.
     """
-    puzzle_string = concat_strs([trans_hash,
-                                prev_block_hash,
-                                str(timestamp),
-                                str(difficulty)])
+    puzzle_string = "".join([trans_hash,
+                             prev_block_hash,
+                             str(timestamp),
+                             str(difficulty)])
     return str(solve_puzzle(puzzle_string, difficulty))
 
 

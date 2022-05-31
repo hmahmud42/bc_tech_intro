@@ -53,12 +53,11 @@ class Transaction(object):
         dict:
             Json version of this transaction.
         """
-        return {USER_ID: self.user_id, TRANS_NO: self.trans_no, TRANS_STR: trans_str}
+        return {USER_ID: self.user_id, TRANS_NO: self.trans_no, TRANS_STR: self.trans_str}
 
     @staticmethod
     def get_trans_hash(trans_list):
-        return sha_256_hash_string(concat_strs([str(t) for t in trans_list]))
-
+        return sha_256_hash_string("".join([str(t) for t in trans_list]))
 
 class TransactionManager:
     """
