@@ -59,6 +59,7 @@ class Transaction(object):
     def get_trans_hash(trans_list):
         return sha_256_hash_string("".join([str(t) for t in trans_list]))
 
+
 class TransactionManager:
     """
     Maintains the transactions at this node that has not
@@ -74,9 +75,7 @@ class TransactionManager:
     def add_transaction(self, trans: Transaction):
         """
         Adds a transaction to the list of transactions not yet added
-        and creates a new block(s) if there are sufficiently many new
-        transactions. Raises a ValueError if the transaction was added
-        before.
+        Raises a ValueError if the transaction was added before.
 
         Parameters
         ----------
@@ -84,9 +83,11 @@ class TransactionManager:
             The transaction to add.
         """
         if (trans.user_id in self.user_max_trans and
-                trans.trans_no <= self.user_max_trans[trans.user_id]) or \
-                trans.user_id in self.user_curr_trans_no:
+            trans.trans_no <= self.user_max_trans[trans.user_id]) or \
+           (trans.user_id in self.user_curr_trans_no and
+            trans.trans_no in self.user_curr_trans_no[trans.user_id]):
             raise ValueError(f"Transaction User: {trans.user_id}, no. : {trans.trans_no} was already added.")
+
         self.user_curr_trans[trans.user_id].append(trans)
         self.user_curr_trans_no[trans.user_id].append(trans.trans_no)
         self.num_trans += 1
@@ -97,7 +98,11 @@ class TransactionManager:
 
     def get_valid_trans(self, last_trans_dict: dict) -> [Transaction] :
         """
-        Returns the latest set of valid transactions for each user.
+        Returns the latest sequence of valid transactions for each user.
+        A transaction sequence is valid if: the latest transaction in
+        last_trans_dict has trans_no 1 less than the earliest transaction
+        in the sequence, and the transaction numbers in the sequence
+        are also in sequence - i.e. n, n+1, n+2 etc.
 
         Parameters
         ----------
@@ -109,7 +114,7 @@ class TransactionManager:
         Return
         ------
         [Transaction]:
-            The set of transactions that may be added to the fork without
+            The sequence of valid transactions that may be added to the fork without
             violating the constraint that for each user all the transactions
             be in sequence within the fork.
         """
@@ -118,21 +123,23 @@ class TransactionManager:
             all_trans = self.user_curr_trans[user_id]
             all_trans = sorted(all_trans)
             all_trans_no = np.array([trans.trans_no for trans in all_trans])
+            # user not in fork the transaction is to be added to.
             if user_id not in last_trans_dict:
+                # so users first transaction should be numbered 0
+                # if this is not there, don't return the users transaction
                 if all_trans[0].trans_no != 0:
                     continue
                 begin = 0
             else:
-                begin = all_trans_no[all_trans_no == last_trans_dict[user_id] + 1]
+                begin = np.where(all_trans_no == last_trans_dict[user_id] + 1)[0]
                 if len(begin) == 0:
                     continue
                 begin = begin[0]
-
-            end = np.where( (all_trans_no[1:] - all_trans_no[0:-1]) > 1 )[0]
+            end = np.where( (all_trans_no[1:] - all_trans_no[0:-1]) > 1)[0]
             if len(end) == 0:
                 ret_trans.extend(all_trans[begin:])
             else:
-                ret_trans.extend(all_trans[begin:end[0]])
+                ret_trans.extend(all_trans[begin:end[0]+1])
 
         return ret_trans
 
