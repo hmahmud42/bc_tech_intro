@@ -150,7 +150,7 @@ It simply concatenates all the inputs, which consists of all the data in the blo
 The last two lines of `create_block()` creates the block header and the block by calling the respective constructors, and then returns the created block. The final created simplifed block is illustrated in Figure: _Simplified Block Created_.
 
 <p align="center">
-  <img src="figures/simplified_block_summary.png" width="450"/>
+  <img src="figures/simplified_block_summary.png"/>
 </p>
 <figcaption align = "center"><b> Figure: Simplified Block Creation Summary.</b></figcaption>
 
@@ -236,7 +236,7 @@ By the [uniqueness of the hash functions](), since all of these go into creating
 A slightly less simple way to tamper would be to recompute the block hash using the tampered data, and then update the block hash for the block(s) as well after tampering. However, this can also be detected cheaply calculating the puzzle string in  `solve_block_puzzle()` and checking that the nonce in block [solves this puzzle](./bc_proto_prelim.md#cryptographic-puzzles) for the difficulty level included in the block. As discussed in the linked article, any tampering will result in the nonce failing the check. Figure Transaction Tampering Flow illustrates how tampering with a single transaction impacts the nonce and henc makes it detectable - compare this with Figre _Simplified Block_
 
 <p align="center">
-  <img src="figures/flow_of_wrongness_trans.png" width="500"/>
+  <img src="figures/flow_of_wrongness_trans.png"/>
 </p>
 <figcaption align = "center"><b> Figure: Tampering With A Single Transaction.</b></figcaption>
 
