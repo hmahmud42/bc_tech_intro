@@ -4,7 +4,7 @@ In this section we discuss some background concepts that will be useful later on
 
 ## A Note on The Pseudocode
 
-All the algorithms and data structures in these articles are written in pseudocode, with pointers to the actual implementation in python. The pseduocode style used here is somewhat unique. It is a mixture of python-esque function definitions and C-style `structs` (so no classes) written with a python syntax. The reason for this choice was to balance making the presentation as language agnostic as possible (hence procedeural rather than object oriented style of coding), and make the jump to python code less jarring. We would be interested in hearing from the reader if this works for them, and if not what they would suggest.
+All the algorithms and data structures in these articles are written in pseudocode, with pointers to the actual implementation in python. The pseudocode style used here is somewhat unique. It is a mixture of python-esque function definitions and C-style `structs` (so no classes) written with a python syntax. The reason for this choice was to balance making the presentation as language agnostic as possible (hence procedural rather than object oriented style of coding), and make the jump to python code less jarring. We would be interested in hearing from the reader if this works for them, and if not what they would suggest.
 
 ## Hashing Perliminaries
 
@@ -12,7 +12,7 @@ In this section discuss some properties of hash functions that are used very hea
 
 ### Uniqueness of Hash Functions
 
-[Hash functions](https://en.wikipedia.org/wiki/Hash_function) like [SHA-256](https://en.wikipedia.org/wiki/SHA-2) are well known concepts in computer science. The blockchain datastructure relies very heavily on the "uniqueness property" of these functions. This property means that given two different strings, say `string-1` and `string-2`, with _very high probability_, `SHA-256(string-1)` will be different from `SHA-256(string-2)`. You can check this by running the sha256 python function in the python code [here](../blockchain_proto/puzzle.py#L12) on many different strings. Some examples of strings and their (SHA256) hashes are given below.
+[Hash functions](https://en.wikipedia.org/wiki/Hash_function) like [SHA-256](https://en.wikipedia.org/wiki/SHA-2) are well known concepts in computer science. The blockchain data structure relies very heavily on the "uniqueness property" of these functions. This property means that given two different strings, say `string-1` and `string-2`, with _very high probability_, `SHA-256(string-1)` will be different from `SHA-256(string-2)`. You can check this by running the sha256 python function in the python code [here](../blockchain_proto/puzzle.py#L12) on many different strings. Some examples of strings and their (SHA256) hashes are given below.
 
 ```python
 "blockchain" "ef7797e13d3a75526946a3bcf00daec9fc9c9c4d51ddc7cc5df888f74dd434d1"
@@ -26,7 +26,7 @@ The reason the uniqueness property is useful is that, for long strings (like som
 
 ### Cryptographic Puzzles
 
-Crypotgraphic hash puzzles are used to to make it difficult to tamper with a blockchain data structure. The main property of these puzzles that is used is that they are very computationally expensive to solve and computationally very cheap to verify. These puzzles are based on the so-called _one-way_ property of hash functions. This property states that given the hash of a particular string, it is not possible to recover that string from the hash without systematically checking the hash of all possible strings (for instance, by lexicographical order). Given this, the puzzle is defined as follows.
+Cryptographic hash puzzles are used to to make it difficult to tamper with a blockchain data structure. The main property of these puzzles that is used is that they are very computationally expensive to solve and computationally very cheap to verify. These puzzles are based on the so-called _one-way_ property of hash functions. This property states that given the hash of a particular string, it is not possible to recover that string from the hash without systematically checking the hash of all possible strings (for instance, by lexicographical order). Given this, the puzzle is defined as follows.
 
 Given a hash function `hash`, the puzzle is defined for a string `s` and a difficulty level `d`, which is a positive whole number: _Find the number `n` such that `hash(sn)` is starts with `d` zeros._ 
 
