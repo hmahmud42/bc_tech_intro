@@ -23,9 +23,10 @@ The rest of the documentation is divided into the following parts:
 
 - [**The Consesus Algorithm**](./docs/bc_proto_consensus_algorithm.md) The distributed consensus algorithm  that ensures that all the nodes within a blockchain have a consisitent record of the data.
 
+- [**Running Proto-Blockchain**](./docs/bc_proto_running_blockchain.md) Putting together all the components above to get a running proto-blockchain. Discussion of what its limitations are and where to go from here.
+
 - [**Final Words**](./docs/bc_proto_final_words.md) Some final thoughts on the articles and where to go from here. 
 
-- [**Running Proto-Blockchain**](./docs/bc_proto_running_blockchain.md) Putting together all the components above to get a running proto-blockchain. Discussion of what its limitations are and where to go from here.
 
 All of the above are supported up by pseduocode implementation, and references to python implementation in this repo. 
 
