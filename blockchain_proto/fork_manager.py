@@ -1,5 +1,12 @@
 """
-Authorization manager for transactions.
+Copyright 2022 M. M. Hassan Mahmud
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+Code for managing forks in the chain.
 """
 from collections import defaultdict
 from datetime import datetime

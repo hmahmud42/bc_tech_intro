@@ -1,3 +1,6 @@
+Copyright 2022 M. M. Hassan Mahmud
+
+
 # The Blockchain Consensus Algorithm
 
 One of the properties that make the blockchain technology so attractive is that any node/peer within the chain can create a transaction at any point in time and add it to the ledger. But because there is no central authority coordinating the work of the peers, the challenge now is to ensure that all the peers have a consistent view of the ledger. That is, ensure that all the nodes agree on what transactions are in the ledger and what order the transactions were performed in. This is called the *blockchain consensus problem* and one of the main innovations of the blockchain technology is an algorithm or protocol that helps solve this. The particular consensus algorithm we look at is often called the Proof of Work based consensus algorithm. This is because for this algorithm requires each node to demonstrate that it has expended a certain amount of computational resource before it can add a block to the chain. This expenditure in turn is shown by [solving the puzzle](./bc_proto_blockchain_ds.md#creating-a-simplified-block) when creating the block. 

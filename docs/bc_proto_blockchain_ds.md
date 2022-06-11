@@ -1,3 +1,6 @@
+Copyright 2022 M. M. Hassan Mahmud
+
+
 # The Blockchain Data Structure
 
 Recall from the [Introduction](./bc_proto_quick_intro.md) that the term blockchain can refer to at least four different concepts, one of them being the core data structure that is used to implement distributed ledgers. In this article we look at this data structure.

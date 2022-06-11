@@ -1,3 +1,5 @@
+Copyright 2022 M. M. Hassan Mahmud
+
 # Final Words
 
 In this section we end this series of articles with some final words on some additional topics that I feel are useful to know about. 

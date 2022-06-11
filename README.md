@@ -1,3 +1,5 @@
+Copyright 2022 M. M. Hassan Mahmud
+
 # A Technical Introduction To Blockchain
 
 The articles and code in this repo gives a technical introduction to the core ideas of the blockchain technology. The repo is meant to be a resource that a programmer would find useful when learning about this blockchains. The documentation covers only at a *high level* what blockchains are and their purpose, but takes an *in depth* look into how they are implemented under the hood.

@@ -1,5 +1,12 @@
 """
-Miscellaneous function for creating blocks.
+Copyright 2022, M. M. Hassan Mahmud
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+Miscellaneous functions for creating blocks.
 """
 from datetime import datetime
 from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle, check_solution

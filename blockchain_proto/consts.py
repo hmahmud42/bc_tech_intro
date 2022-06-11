@@ -1,3 +1,14 @@
+"""
+Copyright 2022 M. M. Hassan Mahmud
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+Constants used in the project.
+"""
+
 NULL_BLOCK_HASH = "NULL-BLOCK-HASH"
 TRANS_GOSSIP = b'transaction'
 BLOCK_GOSSIP = b'block'

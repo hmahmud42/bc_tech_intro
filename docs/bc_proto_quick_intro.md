@@ -1,3 +1,5 @@
+Copyright 2022 M. M. Hassan Mahmud
+
 # Blockchains: A Quick Introduction
 
 In this article, we cover at a high level what blockchains are and what kind of applications they are useful for they are useful for about and so forth. The word blockchain itself can mean at least a couple of different things. It can refer to

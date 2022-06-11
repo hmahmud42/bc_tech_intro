@@ -1,3 +1,5 @@
+Copyright 2022, M. M. Hassan Mahmud
+
 # Preliminary Notes
 
 In this section we discuss some background concepts that will be useful later on. 
