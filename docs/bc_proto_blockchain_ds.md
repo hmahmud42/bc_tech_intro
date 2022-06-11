@@ -45,7 +45,7 @@ We now describe how a block is created.
 <p align="center">
   <img src="figures/full_block.png"/>
 </p>
-<figcaption align = "center"><b> Figure: A Block in a Blockchain.</b></figcaption>
+<p align="center"><b> Figure: A Block in a Blockchain.</b></p>
 
 
 ### The Simplified Block
@@ -159,7 +159,7 @@ The last two lines of `create_block()` creates the block header and the block by
 <p align="center">
   <img src="figures/simplified_block_summary.png"/>
 </p>
-<figcaption align = "center"><b> Figure: Simplified Block Creation Summary.</b></figcaption>
+<p align="center"><b> Figure: Simplified Block Creation Summary.</b></p>
 
 ## The Blockchain Data Structure
 
@@ -229,7 +229,7 @@ The figure below illustrates this
 <p align="center">
   <img src="figures/blockchain_created.png" />
 </p>
-<figcaption align = "center"><b> Figure: The blockchain structure created.</b></figcaption>
+<p align="center"><b> Figure: The blockchain structure created.</b></p>
 
 
 In the following we discuss how the above data structure resists tampering.
@@ -249,7 +249,7 @@ A slightly less simple way to tamper would be to recompute the block hash using 
 <p align="center">
   <img src="figures/flow_of_wrongness_trans.png"/>
 </p>_
-<figcaption align = "center"><b> Figure: Tampering With A Single Transaction.</b></figcaption>
+<p align="center"><b> Figure: Tampering With A Single Transaction.</b></p>
 
 
 So to tamper with a single block in an undetectable way, our tamperer would need to recalculate the nonce as well, which is very computationally expensive (with the expense determined by the difficulty of the puzzle). So essentially, the tamperer would need to create a new block by calling `create_block()` and then replace the current block with the new block.
@@ -318,4 +318,4 @@ The python implementation for this is a bit more complicated, but can be found [
 
 ### Final Words
 
-The above description covers all the core ideas around the blockchain data structure. However, as pointed out earlier, implementing this for a working distributed peer to peer system is generally much more challenging. This is largely because the nodes behave asynchronously, messages get delayed or dropped and so on. We handle some these issues in our implementation but not all. These are further discussed [here](./bc_proto_running_blockchain.md).
+The above description covers all the core ideas relevant to the blockchain data structure. However, as pointed out earlier, implementing this for a working distributed peer to peer system is generally much more challenging. This is largely because the nodes behave asynchronously, messages get delayed or dropped and so on. We handle some these issues in our implementation but not all. These are further discussed [here](./bc_proto_running_blockchain.md).

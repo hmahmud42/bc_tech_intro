@@ -6,7 +6,7 @@ In this section we discuss some background concepts that will be useful later on
 
 All the algorithms and data structures in these articles are written in pseudocode, with pointers to the actual implementation in python. The pseudocode style used here is somewhat unique. It is a mixture of python-esque function definitions and C-style `structs` (so no classes) written with a python syntax. The reason for this choice was to balance making the presentation as language agnostic as possible (hence procedural rather than object oriented style of coding), and make the jump to python code less jarring. We would be interested in hearing from the reader if this works for them, and if not what they would suggest.
 
-## Hashing Perliminaries
+## Hashing Preliminaries
 
 In this section discuss some properties of hash functions that are used very heavily in defining blockchains. 
 
