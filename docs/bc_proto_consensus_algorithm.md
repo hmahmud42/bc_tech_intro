@@ -94,7 +94,8 @@ As we mentioned above, transactions can be created by any node in the blockchain
 
 ### Authorizing a Transaction
 
-When a distributed ledger is used to record transfer of some ownership of some item (land, jewellery, guitar - take your pick) between users, it is often protected using [public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography) so that the transfer from user A to any other user is [digitally signed](https://en.wikipedia.org/wiki/Digital_signature) by A's _private key_. 
+When a distributed ledger is used to record transfer of some ownership of some item (land, jewellery, guitar - take your pick) between users, it is often protected using [public-key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography) so that the transfer from user A to any other user is [digitally signed](https://en.wikipedia.org/wiki/Digital_signature) by A's _private key_. By digitally signing it, user A can ensure no can tamper with the contents of the transaction without the tampering getting detected.
+
 > Since both public-key cryptography and digital signature are well known computer science concepts I will not discuss them in detail beyond the links.
 
 For example a transaction may look like the following

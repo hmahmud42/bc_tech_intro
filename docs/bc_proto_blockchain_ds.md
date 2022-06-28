@@ -318,6 +318,12 @@ def validate_chain(bc: Blockchain) -> (Bool, str):
 ```
 The python implementation for this is a bit more complicated, but can be found [here](../blockchain_proto/block_creator.py) and [here](../blockchain_proto/fork_manager.py). However, [this](./bc_proto_running_blockchain.md) should be read prior to studying that code. 
 
+### Sidebar: Difficulty of Puzzles In Bitcoin
+
+Since bitcoin is the most well known example of a blockchain, it is worth mentioning that the difficulty parameter for creating a block is dynamically adjusted rather than kept at a fixed value. This design decision was made because bitcoin was conceived as a crypto-currency rather than a generic blockchain. By dynamically adjusting the difficulty it can be ensured that about one block was mined by the whole network every ten minutes. The reasons for this was to trade off network stability vs. time to confirm a transaction has been added - see [here](https://bitcoin.stackexchange.com/questions/1863/why-was-the-target-block-time-chosen-to-be-10-minutes) for a detailed discussion of why. 
+
+Additionally, the reward in terms of bitcoins for creating a block, (discussed in [this article](./bc_proto_consensus_algorithm.md) in this series) also decreases over time to ensure that there are 21 million bitcoins ever created. This number, the actual value being somewhat arbitrary, was selected to help prevent inflation so that no one can just 'print money'.
+
 
 ### Final Words
 

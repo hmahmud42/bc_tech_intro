@@ -1,4 +1,5 @@
-Copyright 2022, M. M. Hassan Mahmud
+Copyright 2022 M. M. Hassan Mahmud
+
 
 # Preliminary Notes
 
