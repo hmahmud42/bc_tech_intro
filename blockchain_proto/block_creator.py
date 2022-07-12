@@ -9,6 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Miscellaneous functions for creating blocks.
 """
 from datetime import datetime
+from typing import List
 from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle, check_solution
 from blockchain_proto.transaction import Transaction
 from blockchain_proto.block_simple import BlockHeader, BlockSimple
@@ -46,10 +47,10 @@ def create_block_hash(trans_hash: str,
         The block hash created using SHA256.
     """
     block_data_string = "".join([trans_hash,
-                                 prev_block_hash,
-                                 str(timestamp),
-                                 str(difficulty),
-                                 nonce])
+                                prev_block_hash,
+                                str(timestamp),
+                                str(difficulty),
+                                nonce])
     return sha_256_hash_string(block_data_string)
 
 
@@ -88,7 +89,7 @@ def solve_block_puzzle(trans_hash: str,
     return str(solve_puzzle(puzzle_string, difficulty))
 
 
-def create_block(transactions: [Transaction],
+def create_block(transactions: List[Transaction],
                  prev_block_hash: str,
                  difficulty: int) -> BlockSimple:
 
@@ -103,12 +104,14 @@ def create_block(transactions: [Transaction],
                                    timestamp,
                                    difficulty,
                                    nonce)
-    new_block_header = BlockHeader(block_hash,
-                                    trans_hash,
-                                    prev_block_hash,
-                                    timestamp,
-                                    difficulty,
-                                    nonce)
+    new_block_header = BlockHeader(
+        block_hash=block_hash,
+        transactions_hash=trans_hash,
+        prev_block_hash=prev_block_hash,
+        timestamp=timestamp,
+        difficulty=difficulty,
+        nonce=nonce
+        )
 
     return BlockSimple(new_block_header, transactions)
 
@@ -118,10 +121,10 @@ def validate_block_hashes(block: BlockSimple):
     Makes sure that the block puzzle was solved correctly.
     """
     trans_hash = Transaction.get_trans_hash(block.transactions)
-    puzzle_string = concat_strs([trans_hash,
-                                block.block_header.prev_block_hash,
-                                str(block.block_header.timestamp),
-                                str(block.block_header.difficulty)])
+    puzzle_string = "".join([trans_hash,
+                             block.block_header.prev_block_hash,
+                             str(block.block_header.timestamp),
+                             str(block.block_header.difficulty)])
     block_hash = create_block_hash(trans_hash,
                                    block.block_header.prev_block_hash,
                                    block.block_header.timestamp,
@@ -134,3 +137,5 @@ def validate_block_hashes(block: BlockSimple):
     if not check_solution(puzzle_string, block.block_header.nonce, block.block_header.difficulty):
         raise ValueError(f"Invalid block: invalid puzzle solution {block.block_header.nonce}"
                          f" for puzzle {puzzle_string} at difficulty {block.block_header.difficulty}.")
+    
+    return True

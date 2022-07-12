@@ -9,6 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Implements a simplified version of a block data structure
 """
 from datetime import datetime
+from typing import List
 
 from blockchain_proto.consts import BLOCK_HASH, TRANS_HASH, PREV_BLOCK_HASH, TIMESTAMP, DIFF, NONCE, BLOCK_HEADER, \
     BLOCK_TRANS
@@ -54,9 +55,16 @@ class BlockSimple(object):
 
     def __init__(self,
                  block_header: BlockHeader,
-                 transactions: [Transaction]) -> None:
+                 transactions: List[Transaction]) -> None:
         self.block_header = block_header
         self.transactions = transactions
+
+    def hash(self):
+        return self.block_header.block_hash
+
+    def prev_hash(self):
+        return self.block_header.prev_block_hash
+
 
     def to_json(self):
         """

@@ -8,6 +8,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Implements a simple blockchain data structure.
 """
+from os import times
 from typing import Union
 
 from blockchain_proto.block_simple import BlockSimple
@@ -15,6 +16,37 @@ from blockchain_proto.transaction import Transaction, TransactionManager
 from blockchain_proto.fork_manager import ForkManager, Fork
 from blockchain_proto.block_creator import create_block
 from blockchain_proto.consts import *
+
+
+class BlockMap:
+    """
+    Simple utility class that wraps around a dictionary
+    to support storing blocks by their headers.
+    """
+
+    def __init__(self):
+        self.map = {}
+
+    def __getitem__(self, block):
+        return self.map[block.block_header.block_hash]
+
+    def __contains__(self, block):
+        return block.block_header.block_hash in self.map
+
+    def add(self, block):
+        self.map[block.block_header.block_hash] = block
+
+    def remove(self, block):
+        del self.map[block.block_header.block_hash]
+
+    def to_json(self, timestamp=None):
+        if timestamp is None: 
+            return {block_hash: block.to_json() for block_hash, block in self.map.items()}
+        else:
+            return {block_hash: block.to_json() for block_hash, block in self.map.items()
+                if block.block_header.timestamp > timestamp
+            }
+
 
 
 class BlockChain(object):
@@ -35,13 +67,13 @@ class BlockChain(object):
         self.difficulty = difficulty
         # self.latest_block_hashes = [] # this is a list - one for each fork.
         self.fork_lengths = []
-        self.block_map = {}
+        self.block_map = BlockMap()
         # self.current_transactions = []
         self.trans_dict = {}
         self.trans_manager = TransactionManager()
         self.fork_manager = ForkManager()
 
-    def add_transaction(self, transaction: Transaction) -> [BlockSimple]:
+    def add_transaction(self, transaction: Transaction) -> list(BlockSimple):
         """
         Adds a transaction after validating it, and returns a new block if
         created. If transaction validation fails, it returns the error message (to
@@ -64,12 +96,12 @@ class BlockChain(object):
         self.trans_manager.add_transaction(transaction)
         if len(self.trans_dict) < self.trans_per_block: return []
         self.cleanup()
-        longest_fork = self.fork_manager.longest_fork()
+        longest_fork = self.fork_manager.get_longest_fork()
         valid_trans = self.trans_manager.get_valid_trans(longest_fork.user_trans_dict if longest_fork else {})
         if len(valid_trans) < self.trans_per_block: return []
         return self.add_new_blocks(valid_trans, longest_fork)
 
-    def add_new_blocks(self, valid_trans:[Transaction], fork: Fork) -> [BlockSimple]:
+    def add_new_blocks(self, valid_trans:list(Transaction), fork: Fork) -> list(BlockSimple):
         """
         Create and add new blocks using the valid transactions to the given form.
 
@@ -88,13 +120,13 @@ class BlockChain(object):
             All the blocks added
         """
         trans_to_remove = []
-        latest_block_hash = fork.block_hash if fork else NULL_BLOCK_HASH
+        latest_block_hash = fork.head_block_hash if fork else NULL_BLOCK_HASH
         blocks_added = []
         while len(valid_trans) >= self.trans_per_block:
             new_block = create_block(valid_trans[0:self.trans_per_block],
                                      latest_block_hash,
                                      self.difficulty)
-            self.block_map[new_block.block_header.block_hash] = new_block
+            self.block_map.add(new_block)
             latest_block_hash = new_block.block_header.block_hash
 
             trans_to_remove.append(valid_trans[0:self.trans_per_block])
@@ -125,7 +157,7 @@ class BlockChain(object):
         BlockSimple | str:
             As described in the function description.
         """
-        if incoming_block.block_header.block_hash in self.block_map:
+        if incoming_block in self.block_map:
             raise ValueError(f"Block with has {incoming_block.block_header.block_hash} was already added.")
         try:
             fork = self.fork_manager.validate_incoming_block(incoming_block)
@@ -141,13 +173,12 @@ class BlockChain(object):
         short compared to the longest fork and moves all its transactions into
         the list of transactions that can be added.
         """
-        released_block_hashes = self.fork_manager.cleanup_forks(self.block_map)
-        for block_hash in released_block_hashes:
-            block = self.block_map[block_hash]
+        released_blocks = self.fork_manager.cleanup_forks(self.block_map)
+        for block in released_blocks:
             for trans in block.transactions:
                 self.trans_manager.add_transaction(trans)
 
-            del self.block_map[block_hash]
+            self.block_map.remove(block)
 
     def to_json(self):
         """
@@ -161,7 +192,7 @@ class BlockChain(object):
         return {
             TRANS_PER_BLOCK: self.trans_per_block,
             DIFFICULTY: self.difficulty,
-            BLOCK_MAP: {block_hash: block.to_json() for block_hash, block in self.block_map.items()},
+            BLOCK_MAP: self.block_map.to_json(),
             TRANS_DATA: self.trans_manager.to_json(),
             FORK_DATA: self.fork_manager.to_json()
         }
@@ -170,11 +201,7 @@ class BlockChain(object):
         """
         Returns blockchains which are newer than the given timestamp.
         """
-        return {
-            block_hash: block.to_json() for block_hash, block in self.block_map.items()
-                        if block.block_header.timestamp >= timestamp
-
-        }
+        return self.block_map.to_json(timestamp)
 
     def get_trans_not_added_json(self):
         """

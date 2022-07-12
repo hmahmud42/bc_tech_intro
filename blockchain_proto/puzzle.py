@@ -8,14 +8,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Some utility functions for dealing with puzzles.
 """
-from typing import Callable
-import _hashlib
 from hashlib import sha256
-from functools import reduce
-
-
-def concat_strs(str_list: [str]) -> str:
-    return reduce(lambda x, y: x + y, str_list, "")
 
 
 def sha_256_hash_string(s: str) -> str:

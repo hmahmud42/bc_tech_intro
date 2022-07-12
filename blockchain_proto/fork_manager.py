@@ -8,12 +8,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Code for managing forks in the chain.
 """
-from collections import defaultdict
 from datetime import datetime
-from blockchain_proto.block_creator import validate_block_hashes
+from typing import List
+from blockchain_proto.fork_helper import BlockDepthManager, ForkValidator
 from blockchain_proto.block_simple import BlockSimple
-from blockchain_proto.transaction import Transaction, TransactionManager
-
 from blockchain_proto.consts import *
 
 
@@ -46,16 +44,14 @@ class Fork:
     """
     def __init__(self,
                  fork_id: int,
-                 block_hash: str,
+                 head_block_hash: str,
                  timestamp: datetime,
                  num_blocks:int,
-                 user_trans_dict:dict,
                  fork_start_block_hash: dict):
         self.fork_id  = fork_id
-        self.block_hash = block_hash
+        self.head_block_hash = head_block_hash
         self.timestamp = timestamp
         self.num_blocks = num_blocks
-        self.user_trans_dict = user_trans_dict
         self.fork_start_block_hash = fork_start_block_hash
         
     def to_json(self) -> dict:
@@ -69,10 +65,9 @@ class Fork:
         """
         return {        
            FORK_ID: self.fork_id,
-           BLOCK_HASH: self.block_hash,
+           BLOCK_HASH: self.head_block_hash,
            TIMESTAMP: self.timestamp,
            NUM_BLOCKS: self.num_blocks,
-           USER_TRANS_DICT: self.user_trans_dict,
            FORK_START_BLOCK_HASH: self.fork_start_block_hash
         }        
         
@@ -85,14 +80,15 @@ class ForkManager:
     was added to.
     """
     def __init__(self):
-        self.last_fork_id = 1
+        self.next_fork_id = 0
         self.longest_fork = None
         self.forks = {}
         self.fork_hashes = {}
         self.fork_len_disc = 6
-        self.block_depth_map = {}
-
-    def longest_fork(self) -> Fork:
+        self.block_depth_manager = BlockDepthManager()
+        self.validator = ForkValidator(self)
+        
+    def get_longest_fork(self) -> Fork:
         """
         Returns the longest fork.
 
@@ -103,23 +99,93 @@ class ForkManager:
         """
         return self.longest_fork
 
-    def update_block_depths(self, blocks_added: [BlockSimple]):
+    def fork_length(self, fork):
         """
-        Updates the depth of the blocks based on their previous blocks.
+        Returns the length of the given fork
 
-        blocks_added: [BlockSimple]
-            The list of blocks, in order, to update depths for.
+        Parameter
+        ---------
+        fork: ForkManager
+            The fork for which to return the length
+        
+        Returns
+        -------
+        int:
+            The length of the fork
         """
-        for block in blocks_added:
-            if block.block_header.prev_block_hash != NULL_BLOCK_HASH:
-                self.block_depth_map[block.block_header.block_hash] = \
-                    self.block_depth_map[block.block_header.prev_block_hash] + 1
-            else:
-                self.block_depth_map[block.block_header.block_hash] = 1
+        return self.block_depth_manager.get_depth(fork.block_hash)
 
-    def update(self, fork: Fork, blocks_added: [BlockSimple]) -> None:
+    def _find_insert_fork(self, block):
         """
-        Updates the given fork by adding the blocks to it.
+        Find the fork that block should go into and None
+        if no such fork can be found.
+
+        Parameters
+        ----------
+
+        block: [BlockSimple]
+            The block to find the target fork for.
+
+        Return
+        ------
+
+        Fork:
+            The fork where block should be insereted.
+        """
+        return self.fork_hashes[block.prev_hash()] \
+            if block.prev_hash() in self.fork_hashes else None
+
+    def _add_new_fork(self, block):
+        """
+        Changes the head of the block to point to this new block.
+
+        Parameters
+        ----------
+
+        block: BlockSimple
+            The block to use as the head block for creation.
+
+        Returns
+        -------
+
+        Fork:
+            The newlys created fork. 
+        """
+        bhash = block.hash()
+        new_fork = Fork(
+            fork_id=self.next_fork_id,
+            head_block_hash=bhash,
+            timestamp=block.block_header.timestamp,
+            num_blocks=self.block_depth_manager.get_depth(block.hash()),
+            fork_start_block_hash=bhash)
+
+        self.fork_hashes[bhash] = new_fork
+        self.forks[new_fork.fork_id] = new_fork
+        self.next_fork_id += 1
+        return new_fork
+
+    def _change_fork_head(self, fork: Fork, block: BlockSimple):
+        """
+        Change the head of the given fork to the new block.
+
+        Parameters
+        ----------
+
+        fork: Fork
+            The fork to change the head for.
+
+        block: BlockSimple
+            The block to use as the new head block for the fork.
+        """
+        del self.fork_hashes[fork.fork_start_block_hash]
+        fork.fork_start_block_hash = block.hash()
+        fork.num_blocks = self.block_depth_manager.get_depth(block.hash())
+        self.fork_hashes[fork.fork_start_block_hash] = fork
+
+    def add_blocks(self, blocks_added: List[BlockSimple]) -> None:
+        """
+        Adds the given blocks to the appropriate fork, or creates a new
+        one if none exists
 
         Parameters
         ----------
@@ -130,125 +196,17 @@ class ForkManager:
         blocks_added: [BlockSimple]
             The list of blocks, in order to add to the fork
         """
-        if fork and fork.fork_id not in self.forks:
-            raise ValueError(f"For fork with id {fork.fork_id} and "
-                             f"blockhash {fork.block_hash} "
-                             f"requested to be updated"
-                             f"but fork not in dictionary.")
-        self.update_block_depths(blocks_added)
-
-        if not fork:
-            self.last_fork_id += 1
-            fork = Fork(fork_id=self.last_fork_id,
-                        block_hash=blocks_added[-1].block_header.block_hash,
-                        timestamp=blocks_added[-1].block_header.timestamp,
-                        num_blocks=self.block_depth_map[blocks_added[0].block_header.block_hash] + len(blocks_added),
-                        user_trans_dict=defaultdict(lambda : 0),
-                        fork_start_block_hash=blocks_added[0].block_header.block_hash)
-            self.forks[fork.fork_id] = fork
-            prev_hash = None
-        else:
-            prev_hash = fork.block_hash
-            fork.block_hash = blocks_added[-1].block_header.block_hash
-            fork.timestamp = blocks_added[-1].block_header.timestamp
-            fork.num_blocks += len(blocks_added)
-
-        # assumes transactions within a block are ordered
-        # by trans_no for each user_id
         for block in blocks_added:
-            for trans in block.transactions:
-                fork.user_trans_dict[trans.user_id] = trans.trans_no
+            self.validator.validate_incoming_block(block)
+            self.block_depth_manager.add_block(blocks_added)
+            fork = self._find_insert_fork(block)
+            if fork is None:
+                fork = self._add_new_fork(block)
+            else:
+                self._change_fork_head(fork, block)
+            self.validator.add_block(block)
 
-        self.fork_hashes[fork.block_hash] = fork
-        if prev_hash: del self.fork_hashes[prev_hash]
-
-    def validate_incoming_block(self, inc_block: BlockSimple) -> Fork:
-        """
-        Validates a block that was received from a peer.
-        First makes sure that its previous block hash is in fact there.
-        Then ensures that the transactions in the block are in order.
-        Then ensures that the puzzle was solved correctly.
-
-        Parameters
-        ----------
-
-        inc_block: BlockSimple
-            The block to validated.
-
-        Return
-        ------
-
-        Fork:
-            The fork the block should be added to.
-        TODO: deal with out of order blocks.
-        """
-        prev_block_hash = inc_block.block_header.prev_block_hash
-        if prev_block_hash != NULL_BLOCK_HASH and prev_block_hash not in self.fork_hashes:
-            raise ValueError(f"Preceding blocks for incoming block with hash "
-                             f"{inc_block.block_header.block_hash} not found.")
-
-        user_trans = defaultdict(lambda : [])
-        for trans in inc_block.transactions:
-            user_trans[trans.user_id].append(trans.trans_no)
-
-        self._validate_block_transaction_order(inc_block, user_trans)
-
-        fork = None
-        if prev_block_hash != NULL_BLOCK_HASH:
-            fork = self.fork_hashes[prev_block_hash]
-            self._validate_block_user_latest_trans(fork, inc_block, user_trans)
-
-        validate_block_hashes(inc_block)
-        return fork
-
-    @staticmethod
-    def _validate_block_transaction_order(block: BlockSimple, user_trans: dict):
-        """
-        Validates the transaction order for each user in a given block using the
-        user transactions from the block. Raises a value error if validation fails.
-
-        Parameters
-        ----------
-
-        block: BlockSimple
-            The block for which to validate transaction orders
-
-        user_trans: dict
-            Dictionary of mapping each user to the set of transactions.
-        """
-        for user_id in user_trans:
-            tns = user_trans[user_id]
-            if not all([tns[i] + 1 == tns[i + 1] for i in range(len(tns) - 1)]):
-                raise ValueError(f"Transactions for {user_id} in block with " +
-                                 f"hash {block.block_header.block_hash}" +
-                                 f"are not in order.")
-
-    @staticmethod
-    def _validate_block_user_latest_trans(fork: Fork, block: BlockSimple, user_trans: dict):
-        """
-        Validates that for each user the oldest transaction in the fork is
-        numbered one minus the oldest transaction number for that user
-        in the block.
-
-        Parameters
-        ----------
-
-        block: BlockSimple
-            The block for which to validate transaction orders
-
-        user_trans: dict
-            Dictionary of mapping each user to the set of transactions.
-        """
-        for user_id in user_trans:
-            tns = user_trans[user_id]
-            if (user_id not in fork.user_trans_dict and tns[0] > 0) or \
-                    fork.user_trans_dict[user_id] + 1 != tns[0]:
-                raise ValueError(f"Earliest transactions for {user_id} in block with " +
-                                 f"hash {block.block_header.block_hash}" +
-                                 f"is {tns[0]} while latest transaction in local chain " +
-                                 f"is  {fork.user_trans_dict[user_id]}.")
-
-    def cleanup_forks(self, block_map) -> [str]:
+    def cleanup_forks(self, block_map) -> List[str]:
         """
         Drop any fork that is more than 6 blocks shorter than the longest block,
         and release the transactions in the block to be added to the transaction
@@ -261,11 +219,11 @@ class ForkManager:
 
             cur_block = block_map[fork.block_hash]
             block_hashes_released.append(fork.block_hash)
-            del self.block_depth_map[cur_block.block_header.block_hash]
+            self.block_depth_manager.remove(cur_block.hash())
             while cur_block.block_header.block_hash != fork.fork_start_block_hash:
                 cur_block = block_map(cur_block.block_header.prev_block_hash)
                 block_hashes_released.append(cur_block.block_header.block_hash)
-                del self.block_depth_map[cur_block.block_header.block_hash]
+                self.block_depth_manager.remove(cur_block.hash())
 
             del self.forks[fork.fork_id]
             del self.fork_hashes[fork.block_hash]
