@@ -8,9 +8,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Implements helper classes for the fork manager.
 """
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import List
-from blockchain_proto.fork_manager import Fork, ForkManager
 from blockchain_proto.block_simple import BlockSimple
 from blockchain_proto.block_creator import validate_block_hashes
 from blockchain_proto.consts import NULL_BLOCK_HASH
@@ -54,17 +53,18 @@ class BlockDepthManager:
 
 class LatestTrans:
     """
-    Class that maintains the latest transaction for each user 
+    Class that maintains the latest transaction for each user
     in the blocks in a blockchain
     """
     def __init__(self):
         # map blocks to latest transaction per user
-        self.trans_map = {}
+        self.trans_map = OrderedDict()
+        self.prev_hashes = OrderedDict()
 
     def add_block(self, block: BlockSimple):
         """
         Updates the trans_map to store the latest transactions
-        for each user. Assumes transactions in the block are ordered 
+        for each user. Assumes transactions in the block are ordered
         for each user.
 
         Parameter
@@ -75,8 +75,9 @@ class LatestTrans:
         self.trans_map[block.hash()] = {
             trans.user_id: trans.trans_no for trans in block.transactions
         }
+        self.prev_hashes[block.hash()] = block.prev_hash()
 
-    def get_latest(self, user_id: str, start_block: BlockSimple):
+    def get_latest_trans(self, user_id: str, start_hash: str):
         """
         Returns the latest transaction for each user in the blockchain
         starting at the given block.
@@ -97,13 +98,15 @@ class LatestTrans:
             If a transaction for this user is found then the no.
             of that transaction, otherwise -1.
         """
-        cur_block = start_block
+        cur_hash = start_hash
         while True:
-            if user_id in self.trans_map[cur_block.hash()]:
-                return self.trans_map[cur_block.hash()][user_id]
-            if cur_block.prev_hash() == NULL_BLOCK_HASH:
+            if cur_hash not in self.trans_map:
+                return -1 
+            if user_id in self.trans_map[cur_hash]:
+                return self.trans_map[cur_hash][user_id]
+            if self.prev_hashes[cur_hash] == NULL_BLOCK_HASH:
                 return -1
-            cur_block = self.trans_map[cur_block.prev_hash()]
+            cur_hash = self.prev_hashes[cur_hash]
 
     def __contains__(self, bhash):
         return bhash in self.trans_map
@@ -119,7 +122,7 @@ class ForkValidator:
         self.fork_manager = fork_manager
         self.latest_trans = LatestTrans()
 
-    def validate_incoming_block(self, inc_block: BlockSimple) -> Fork:
+    def validate_incoming_block(self, inc_block: BlockSimple) -> 'Fork':
         """
         Validates a block that was received from a peer.
         First makes sure that its previous block hash is in fact there.
@@ -194,8 +197,16 @@ class ForkValidator:
             Dictionary of mapping each user to the set of transactions.
         """
         for user_id in user_trans:
-            latest_trans = self.latest_trans.get_latest(user_id, start_block) 
+            # TODO: get all the user latest transactions at the same time
+            latest_trans = self.latest_trans.get_latest_trans(user_id, start_block.prev_hash()) 
             if latest_trans != user_trans[user_id][0] - 1:
+                print(start_block.prev_hash())
+                for item in self.latest_trans.trans_map.items():
+                    print(item)
+                print("\n\n")
+                for item in self.latest_trans.prev_hashes.items():
+                    print(item)
+
                 raise ValueError(earliest_trans_mismatch_msg(
                     user_id, start_block.hash(), user_trans[user_id][0], latest_trans))
 

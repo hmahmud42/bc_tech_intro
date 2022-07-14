@@ -8,11 +8,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Contains some error messages
 """
-
-
 def unordered_trans_msg(user_id, bhash):
     return f"Transactions for {user_id} in block with " +\
            f"hash {bhash} are not in order."
+
 
 def prec_block_not_found_msg(bhash, prev_hash):
     return f"Preceding block {prev_hash[0:10]} for incoming block with hash " +\

@@ -38,13 +38,13 @@ def test_block_creation():
         block.block_header.timestamp, 1,
         block.block_header.nonce)
 
-    assert validate_block_hashes(block)
-
     puzzle_string = "".join(
         [trans_hash, 'test_hash', 
          str(block.block_header.timestamp), "1"])
 
     assert check_solution(puzzle_string, block.block_header.nonce, 1)
+
+    assert validate_block_hashes(block)
 
 
 

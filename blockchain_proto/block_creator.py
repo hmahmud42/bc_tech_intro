@@ -10,7 +10,7 @@ Miscellaneous functions for creating blocks.
 """
 from datetime import datetime
 from typing import List
-from blockchain_proto.puzzle import concat_strs, sha_256_hash_string, solve_puzzle, check_solution
+from blockchain_proto.puzzle import sha_256_hash_string, solve_puzzle, check_solution
 from blockchain_proto.transaction import Transaction
 from blockchain_proto.block_simple import BlockHeader, BlockSimple
 

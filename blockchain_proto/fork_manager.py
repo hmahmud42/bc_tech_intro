@@ -198,13 +198,40 @@ class ForkManager:
         """
         for block in blocks_added:
             self.validator.validate_incoming_block(block)
-            self.block_depth_manager.add_block(blocks_added)
+            self.block_depth_manager.add_block(block)
             fork = self._find_insert_fork(block)
             if fork is None:
                 fork = self._add_new_fork(block)
             else:
                 self._change_fork_head(fork, block)
             self.validator.add_block(block)
+
+    def get_block_hashes_in_fork(self, fork:Fork, block_map):
+        """
+        Returns all the hashes for the given fork.
+
+        Parameter
+        ---------
+
+        fork: Fork
+            The fork for which to return the blocks.
+
+        block_map: dict
+            Map from block hashes to blocks.
+
+        Returns
+        -------
+
+        list(str):
+            The hashes of the blocks in the given fork. 
+        """
+        ls = []
+        cur_block = block_map[fork.block_hash]
+        while cur_block.hash() != fork.fork_start_block_hash:
+            ls.append(cur_block.hash())
+            cur_block = block_map(cur_block.prev_hash())
+        ls.append(fork.fork_start_block_hash)
+        return ls                
 
     def cleanup_forks(self, block_map) -> List[str]:
         """
@@ -216,14 +243,11 @@ class ForkManager:
         for fork in self.forks.items():
             if fork.num_blocks >= self.longest_fork.num_blocks - 6:
                 continue
+            bhashes_in_fork = self.get_block_hashes_in_fork(fork, block_map)
+            block_hashes_released.extend(bhashes_in_fork)
 
-            cur_block = block_map[fork.block_hash]
-            block_hashes_released.append(fork.block_hash)
-            self.block_depth_manager.remove(cur_block.hash())
-            while cur_block.block_header.block_hash != fork.fork_start_block_hash:
-                cur_block = block_map(cur_block.block_header.prev_block_hash)
-                block_hashes_released.append(cur_block.block_header.block_hash)
-                self.block_depth_manager.remove(cur_block.hash())
+            for bhash in bhashes_in_fork:
+                self.block_depth_manager.remove(bhash)
 
             del self.forks[fork.fork_id]
             del self.fork_hashes[fork.block_hash]
