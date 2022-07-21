@@ -21,4 +21,9 @@ def prec_block_not_found_msg(bhash, prev_hash):
 def earliest_trans_mismatch_msg(user_id, bhash, tran_no, latest_tran_no):
     return f"Earliest transactions for {user_id} in block with " +\
            f"hash {bhash} is {tran_no} while latest transaction " +\
-           f"in local chain {latest_tran_no}."
+           f"in local chain {latest_tran_no} (should be exactly 1 more)."
+
+
+def block_was_already_added_msg(bhash):
+    return f"Block with hash {bhash} was already added"
+

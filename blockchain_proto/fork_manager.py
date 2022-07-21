@@ -195,16 +195,34 @@ class ForkManager:
 
         blocks_added: [BlockSimple]
             The list of blocks, in order to add to the fork
+
+        Returns
+        -------
+
+        list: 
+            For each block, 1 the validation was successful and
+            block was added else the error message.
         """
+        add_status = []
         for block in blocks_added:
-            self.validator.validate_incoming_block(block)
+            try:
+                self.validator.validate_incoming_block(block)
+            except ValueError as v:
+                add_status.append(str(v))
+                continue
             self.block_depth_manager.add_block(block)
             fork = self._find_insert_fork(block)
-            if fork is None:
-                fork = self._add_new_fork(block)
-            else:
-                self._change_fork_head(fork, block)
+            if fork is None: fork = self._add_new_fork(block)
+            else: self._change_fork_head(fork, block)
+            
+            if self.longest_fork is None or fork.num_blocks > self.longest_fork.num_blocks:
+                self.longest_fork = fork
+
             self.validator.add_block(block)
+            add_status.append(1)
+        
+        return add_status
+
 
     def get_block_hashes_in_fork(self, fork:Fork, block_map):
         """

@@ -6,7 +6,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Code for managing forks in the chain.
+Tests the fork manager.
 """
 from datetime import datetime
 
@@ -16,6 +16,9 @@ from blockchain_proto.block_simple import BlockHeader, BlockSimple
 from blockchain_proto.fork_manager import  ForkManager
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from block_creator_for_test import create_transactions
+from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
+    earliest_trans_mismatch_msg, block_was_already_added_msg
+
 
 
 def create_block_header():
@@ -34,50 +37,8 @@ def create_block_simple(base_trans):
     return BlockSimple(block_header=bh, transactions=trans_list)
 
 
-def test_fork_manager_update():
+def test_fork_manager_add():
 
-    # check new fork was created
-    # base_trans = [23, 24]
-    # bs_1 = create_block_simple(base_trans)    
-    # fork_manager = ForkManager()
-    # fork_manager.update(None, [bs_1])
-    # assert fork_manager.next_fork_id == 1
-    # assert fork_manager.fork_hashes[bs_1.block_header.block_hash].fork_id == 1
-    # assert fork_manager.forks[1].fork_id == 1
-    # assert fork_manager.longest_fork == fork_manager.forks[1]
-    # assert fork_manager.longest_fork.user_trans_dict['User 1'] == 25
-    # assert fork_manager.longest_fork.user_trans_dict['User 2'] == 24
-
-    # # create another fork
-    # base_trans = [26, 25]
-    # bs_2 = create_block_simple(base_trans)
-    # bs_2.block_header.block_hash = "block_hash_for_second_block"
-    # fork_manager.update(None, [bs_2])
-    # assert fork_manager.next_fork_id == 2
-    # assert fork_manager.fork_hashes[bs_2.block_header.block_hash].fork_id == 2
-    # assert fork_manager.forks[2].fork_id == 2
-    # assert fork_manager.longest_fork == fork_manager.forks[1]
-    # assert fork_manager.forks[2].user_trans_dict['User 1'] == 28
-    # assert fork_manager.forks[2].user_trans_dict['User 2'] == 25
-    # assert fork_manager.longest_fork.user_trans_dict['User 2'] == 24
-
-    # # add a new block to the second fork
-    # base_trans = [29, 26]
-    # next_fork = fork_manager.forks[2]
-    # bs_3 = create_block_simple(base_trans)
-    # bs_3.block_header.block_hash = "block_hash_for_third_block"
-    # bs_3.block_header.prev_block_hash = "block_hash_for_second_block"
-    # fork_manager.update(next_fork, [bs_3])
-    # assert fork_manager.next_fork_id == 2
-    # assert fork_manager.fork_hashes[bs_3.block_header.block_hash].fork_id == 2
-    # assert fork_manager.forks[2].fork_id == 2
-    # assert fork_manager.longest_fork == fork_manager.forks[2]
-    # assert fork_manager.longest_fork.user_trans_dict['User 1'] == 31
-    # assert fork_manager.longest_fork.user_trans_dict['User 2'] == 26
-    # assert len(fork_manager.fork_hashes) == 2
-
-    # create a set number of forks and make sure
-    # the correct numbers are created
     fork_manager = ForkManager()
     # number of forks including main branch.
     num_forks = 6
@@ -103,29 +64,15 @@ def test_fork_manager_update():
         prev_hash = block.block_header.block_hash
         block_list.append(block)
     
-    # for i, hash in enumerate(fork_manager.block_depth_manager):
-    #     print(f"{i}: {hash}")
-
-    print("\n------\n")
-    for i, b in enumerate(block_list):
-        print(f"{i}: {b.block_header.block_hash}")
-    print("\n------\n")
-
     base_transes = [[(fep+1)*3, fep+1] for fep in fork_entry_points]
-    print(base_transes)
-
 
     # create the forks
     for fj, fep in enumerate(fork_entry_points):
-        print(f"Creating branch at {fep}")
         prev_hash = block_list[fep].block_header.block_hash
-        print(f"prev_hash {prev_hash}")
         base_trans = base_transes[fj]
         for i in range(fork_lens[fj]):
-            print(f"block number {i}")
             trans = create_transactions(base_trans)
             block = create_block(trans, prev_hash, 1)
-            print(block.block_header.prev_block_hash)
             fork_manager.add_blocks([block])            
             base_trans [0] += 3
             base_trans [1] += 1
@@ -133,17 +80,51 @@ def test_fork_manager_update():
             block_list.append(block)
 
     # # now check the validity 
-    # assert fork_manager.next_fork_id == num_forks
-    # assert len(fork_manager.forks) == num_forks
-    # for fork_id in range(1, num_forks):
-    #     assert fork_manager.forks[fork_id].num_blocks == \
-    #         fork_entry_points[fork_id] + fork_lens[fork_id]
+    assert fork_manager.next_fork_id == num_forks
+    assert len(fork_manager.forks) == num_forks
 
-    # assert fork_manager.longest_fork.fork_id == 2    
+    for fork_id in range(1, num_forks):
+        assert fork_manager.forks[fork_id].num_blocks == \
+            (fork_entry_points[fork_id-1] + fork_lens[fork_id-1] + 1)
+
+    assert fork_manager.get_longest_fork().fork_id == 2    
+
+    # Test error condition: block was already added
+    ret = fork_manager.add_blocks([block])
+    error_msg = block_was_already_added_msg(block.hash())
+    assert ret[0] == error_msg
     
+    # Test error condition transaction ordering
+    base_trans[0] = block.transactions[2].trans_no
+    base_trans[1] = block.transactions[3].trans_no
+    trans = create_transactions(base_trans)
+    prev_hash = block_list[-1].hash()
+    block = create_block(trans, prev_hash, 1)
+    ret = fork_manager.add_blocks([block])
+    error_msg = earliest_trans_mismatch_msg("User 1", block.hash(), 
+                    base_trans[0], base_trans[0])
+    assert ret[0] == error_msg
+
+    # Test prec block not found 
+    bad_prev_hash =  "RANDOM_HASH"
+    block = create_block(trans, bad_prev_hash, 1)
+    ret = fork_manager.add_blocks([block])
+    error_msg = prec_block_not_found_msg(block.hash(), bad_prev_hash)
+    assert ret[0] == error_msg  
+
+    # test unordered transaction message
+    base_trans[0] = block.transactions[2].trans_no + 1
+    base_trans[1] = block.transactions[3].trans_no + 1
+    trans = list(create_transactions(base_trans))
+    trans[0], trans[1] = trans[1], trans[0]
+    block = create_block(trans, prev_hash, 1)
+    ret = fork_manager.add_blocks([block])
+    error_msg = unordered_trans_msg("User 1", block.hash())
+    assert ret[0] == error_msg
+
 
 if __name__ == '__main__':
-    test_fork_manager_update()
+    test_fork_manager_add()
 
 
 

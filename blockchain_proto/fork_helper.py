@@ -14,7 +14,7 @@ from blockchain_proto.block_simple import BlockSimple
 from blockchain_proto.block_creator import validate_block_hashes
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
-    earliest_trans_mismatch_msg
+    earliest_trans_mismatch_msg, block_was_already_added_msg
 
 
 class BlockDepthManager:
@@ -146,6 +146,9 @@ class ForkValidator:
         if prev_hash != NULL_BLOCK_HASH and prev_hash not in self.latest_trans:
             raise ValueError(prec_block_not_found_msg(inc_block.hash(), prev_hash))
 
+        if inc_block.hash() in self.latest_trans:
+            raise ValueError(block_was_already_added_msg(inc_block.hash()))
+
         self.validate_transactions(inc_block)
         validate_block_hashes(inc_block)
 
@@ -200,12 +203,13 @@ class ForkValidator:
             # TODO: get all the user latest transactions at the same time
             latest_trans = self.latest_trans.get_latest_trans(user_id, start_block.prev_hash()) 
             if latest_trans != user_trans[user_id][0] - 1:
-                print(start_block.prev_hash())
-                for item in self.latest_trans.trans_map.items():
-                    print(item)
-                print("\n\n")
-                for item in self.latest_trans.prev_hashes.items():
-                    print(item)
+                # Debug messages
+                # print(start_block.prev_hash())
+                # for item in self.latest_trans.trans_map.items():
+                #     print(item)
+                # print("\n\n")
+                # for item in self.latest_trans.prev_hashes.items():
+                #     print(item)
 
                 raise ValueError(earliest_trans_mismatch_msg(
                     user_id, start_block.hash(), user_trans[user_id][0], latest_trans))
