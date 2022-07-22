@@ -177,10 +177,10 @@ class ForkManager:
         block: BlockSimple
             The block to use as the new head block for the fork.
         """
-        del self.fork_hashes[fork.fork_start_block_hash]
-        fork.fork_start_block_hash = block.hash()
+        del self.fork_hashes[fork.head_block_hash]
+        fork.head_block_hash = block.hash()
         fork.num_blocks = self.block_depth_manager.get_depth(block.hash())
-        self.fork_hashes[fork.fork_start_block_hash] = fork
+        self.fork_hashes[fork.head_block_hash] = fork
 
     def add_blocks(self, blocks_added: List[BlockSimple]) -> None:
         """
@@ -223,7 +223,6 @@ class ForkManager:
         
         return add_status
 
-
     def get_block_hashes_in_fork(self, fork:Fork, block_map):
         """
         Returns all the hashes for the given fork.
@@ -244,10 +243,10 @@ class ForkManager:
             The hashes of the blocks in the given fork. 
         """
         ls = []
-        cur_block = block_map[fork.block_hash]
+        cur_block = block_map[fork.head_block_hash]
         while cur_block.hash() != fork.fork_start_block_hash:
             ls.append(cur_block.hash())
-            cur_block = block_map(cur_block.prev_hash())
+            cur_block = block_map[cur_block.prev_hash()]
         ls.append(fork.fork_start_block_hash)
         return ls                
 
@@ -258,17 +257,19 @@ class ForkManager:
         manager.
         """
         block_hashes_released = []
-        for fork in self.forks.items():
-            if fork.num_blocks >= self.longest_fork.num_blocks - 6:
+        fork_list = list(self.forks.values())
+        for fork in fork_list:
+            if fork.num_blocks >= self.longest_fork.num_blocks - self.fork_len_disc:
                 continue
             bhashes_in_fork = self.get_block_hashes_in_fork(fork, block_map)
             block_hashes_released.extend(bhashes_in_fork)
 
             for bhash in bhashes_in_fork:
                 self.block_depth_manager.remove(bhash)
+                self.validator.remove_block(bhash)
 
             del self.forks[fork.fork_id]
-            del self.fork_hashes[fork.block_hash]
+            del self.fork_hashes[fork.head_block_hash]
 
         return block_hashes_released
 

@@ -14,7 +14,7 @@ from blockchain_proto.block_simple import BlockSimple
 from blockchain_proto.block_creator import validate_block_hashes
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
-    earliest_trans_mismatch_msg, block_was_already_added_msg
+    earliest_trans_mismatch_msg, block_was_already_added_msg, remove_non_existent_block_msg
 
 
 class BlockDepthManager:
@@ -38,11 +38,12 @@ class BlockDepthManager:
         else:
             self.block_depth_map[block.hash()] = 1
 
-    def remove(self, block: BlockSimple):
+    def remove(self, bhash: str):
         """
-        Removes the given block from the depth manager.
+        Removes the given block with the given hash 
+        from the depth manager.
         """
-        del self.block_depth_map[block.hash()]
+        del self.block_depth_map[bhash]
 
     def get_depth(self, bhash: str):
         """
@@ -111,6 +112,18 @@ class LatestTrans:
     def __contains__(self, bhash):
         return bhash in self.trans_map
 
+    def remove_block(self, bhash):
+        """
+        Removes the given block hash from internal data structures.
+
+        Parameters
+        ----------
+
+        bhash: str
+            hash of the block to remove
+        """
+        del self.trans_map[bhash]
+        del self.prev_hashes[bhash]
 
 
 class ForkValidator:
@@ -228,3 +241,18 @@ class ForkValidator:
         """
         assert block.hash() not in self.latest_trans
         self.latest_trans.add_block(block)
+
+    def remove_block(self, bhash):
+        """
+        Removes the block with hash bhash from internal data structures.
+
+        Parameters
+        ----------
+
+        bhash: str
+            The block to add
+        """
+        try:
+            self.latest_trans.remove_block(bhash)
+        except KeyError as k:
+            raise KeyError(remove_non_existent_block_msg(bhash))

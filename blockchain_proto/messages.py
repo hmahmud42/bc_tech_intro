@@ -27,3 +27,7 @@ def earliest_trans_mismatch_msg(user_id, bhash, tran_no, latest_tran_no):
 def block_was_already_added_msg(bhash):
     return f"Block with hash {bhash} was already added"
 
+
+def remove_non_existent_block_msg(bhash):
+    return f"Tring to remove non-existent block with hash {bhash}."
+

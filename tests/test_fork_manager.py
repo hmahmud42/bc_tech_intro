@@ -68,7 +68,7 @@ def test_fork_manager_add():
 
     # create the forks
     for fj, fep in enumerate(fork_entry_points):
-        prev_hash = block_list[fep].block_header.block_hash
+        prev_hash = block_list[fep].hash()
         base_trans = base_transes[fj]
         for i in range(fork_lens[fj]):
             trans = create_transactions(base_trans)
@@ -123,8 +123,63 @@ def test_fork_manager_add():
     assert ret[0] == error_msg
 
 
+def test_fork_manager_cleanup():
+    fork_manager = ForkManager()
+    # number of forks including main branch.
+    main_branch_len = 10
+    fork_entry_point = 3
+    fork_len = 2
+    block_map = {}
+
+    # create main branch
+    base_trans = [0, 0]
+    prev_hash = NULL_BLOCK_HASH
+    block_list = []
+    for i in range(main_branch_len):
+        trans = create_transactions(base_trans)
+        block = create_block(trans, prev_hash, 1)
+        fork_manager.add_blocks([block])
+        base_trans [0] += 3
+        base_trans [1] += 1
+        prev_hash = block.block_header.block_hash
+        block_list.append(block)
+        block_map[block.hash()] = block
+
+    
+    # create the fork
+    base_trans = [(fork_entry_point+1)*3, fork_entry_point+1] 
+    prev_hash = block_list[fork_entry_point].hash()
+    for i in range(fork_len):
+        trans = create_transactions(base_trans)
+        block = create_block(trans, prev_hash, 1)
+        fork_manager.add_blocks([block])            
+        base_trans [0] += 3
+        base_trans [1] += 1
+        prev_hash = block.block_header.block_hash
+        block_list.append(block)
+        block_map[block.hash()] = block
+
+    assert fork_manager.longest_fork.fork_id == 0
+    assert fork_manager.longest_fork.num_blocks == main_branch_len
+    assert fork_manager.forks[1].num_blocks == \
+        fork_entry_point + fork_len + 1
+
+    # set the fork_manager discard length to be shorter
+    # than the default for the test
+    fork_manager.fork_len_disc = 2
+    bhashes_released = fork_manager.cleanup_forks(block_map)
+
+    assert bhashes_released[0] == block_list[-1].hash()
+    assert bhashes_released[1] == block_list[-2].hash()
+    assert fork_manager.next_fork_id == 2
+    assert len(fork_manager.forks) == 1
+
+
+
+
 if __name__ == '__main__':
     test_fork_manager_add()
+    test_fork_manager_cleanup()
 
 
 
