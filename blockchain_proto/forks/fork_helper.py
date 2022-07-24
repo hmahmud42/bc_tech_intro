@@ -10,8 +10,8 @@ Implements helper classes for the fork manager.
 """
 from collections import defaultdict, OrderedDict
 from typing import List
-from blockchain_proto.block_simple import BlockSimple
-from blockchain_proto.block_creator import validate_block_hashes
+from blockchain_proto.blockchain.block_simple import BlockSimple
+from blockchain_proto.blockchain.block_helper import validate_block_hashes
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
     earliest_trans_mismatch_msg, block_was_already_added_msg, remove_non_existent_block_msg
@@ -256,3 +256,23 @@ class ForkValidator:
             self.latest_trans.remove_block(bhash)
         except KeyError as k:
             raise KeyError(remove_non_existent_block_msg(bhash))
+
+    def get_latest_trans(self, user_id:str, start_block_hash:str) -> int:
+        """
+        Gets the latest transaction for the given user starting from the
+        given block hash.
+
+        Parameters
+        ----------
+
+        user_id: str
+            The user for whom to return the latest transactio no.
+
+        Returns
+        -------
+
+        int:
+            The latest transaction no. if the transaction exists and 
+            -1 otherwise.
+        """    
+        return self.latest_trans.get_latest_trans(user_id, start_block_hash)

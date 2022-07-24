@@ -6,14 +6,13 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Tests the fork manager.
+Tests for the fork manager.
 """
 from datetime import datetime
 
-from blockchain_proto.block_creator import create_block
-from blockchain_proto.transaction import Transaction
-from blockchain_proto.block_simple import BlockHeader, BlockSimple
-from blockchain_proto.fork_manager import  ForkManager
+from blockchain_proto.blockchain.block_helper import create_block
+from blockchain_proto.blockchain.block_simple import BlockHeader, BlockSimple
+from blockchain_proto.forks.fork_manager import  ForkManager
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from block_creator_for_test import create_transactions
 from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \

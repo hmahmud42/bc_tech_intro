@@ -13,7 +13,7 @@ from typing import List
 
 from blockchain_proto.consts import BLOCK_HASH, TRANS_HASH, PREV_BLOCK_HASH, TIMESTAMP, DIFF, NONCE, BLOCK_HEADER, \
     BLOCK_TRANS
-from blockchain_proto.transaction import Transaction
+from blockchain_proto.transactions.transaction import Transaction
 
 
 class BlockHeader(object):

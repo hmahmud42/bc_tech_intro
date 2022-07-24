@@ -8,69 +8,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Code for managing forks in the chain.
 """
-from datetime import datetime
 from typing import List
-from blockchain_proto.fork_helper import BlockDepthManager, ForkValidator
-from blockchain_proto.block_simple import BlockSimple
+from blockchain_proto.forks.fork_helper import BlockDepthManager, ForkValidator
+from blockchain_proto.forks.fork import Fork
+from blockchain_proto.blockchain.block_simple import BlockSimple
 from blockchain_proto.consts import *
 
 
-class Fork:
-    """
-    Container class for information pertaining to a fork in an
-    underlying blockchain
-
-    Parameters
-    ----------
-
-    fork_id: int
-        The id of the fork.
-
-    block_hash: str
-        The hash of the latest block in the fork.
-
-    timestamp: datetime
-        Timestamp of when the block was created
-
-    num_blocks: int
-        The number of blocks in the fork.
-
-    user_trans_dict: dict
-        Dictionary mapping each user_id to the trans_no for the
-        latest transaction for that user.
-
-    fork_start_block_hash: str:
-        Block hash of the first block in the fork off of the previous trunk
-    """
-    def __init__(self,
-                 fork_id: int,
-                 head_block_hash: str,
-                 timestamp: datetime,
-                 num_blocks:int,
-                 fork_start_block_hash: dict):
-        self.fork_id  = fork_id
-        self.head_block_hash = head_block_hash
-        self.timestamp = timestamp
-        self.num_blocks = num_blocks
-        self.fork_start_block_hash = fork_start_block_hash
-        
-    def to_json(self) -> dict:
-        """
-        Returns the json version of this fork.
-        
-        Returns
-        -------
-        dict:
-            Json of this fork.
-        """
-        return {        
-           FORK_ID: self.fork_id,
-           BLOCK_HASH: self.head_block_hash,
-           TIMESTAMP: self.timestamp,
-           NUM_BLOCKS: self.num_blocks,
-           FORK_START_BLOCK_HASH: self.fork_start_block_hash
-        }        
-        
 
 class ForkManager:
     """
@@ -114,6 +58,18 @@ class ForkManager:
             The length of the fork
         """
         return self.block_depth_manager.get_depth(fork.block_hash)
+
+    def num_forks(self):
+        """
+        Returns the number of forks in the fork manager.
+
+        Returns
+        -------
+
+        int:
+            Number of forks in this fork manager.
+        """
+        return len(self.forks)
 
     def _find_insert_fork(self, block):
         """
@@ -214,10 +170,8 @@ class ForkManager:
             fork = self._find_insert_fork(block)
             if fork is None: fork = self._add_new_fork(block)
             else: self._change_fork_head(fork, block)
-            
             if self.longest_fork is None or fork.num_blocks > self.longest_fork.num_blocks:
                 self.longest_fork = fork
-
             self.validator.add_block(block)
             add_status.append(1)
         
@@ -287,3 +241,25 @@ class ForkManager:
             LONGEST_FORK_ID: self.longest_fork.fork_id,
             FORKS: {fork_id: fork.to_json for fork, fork_id in self.forks.items()}
         }
+
+
+    def get_longest_latest_trans_no(self, user_id:str):
+        """
+        Gets the latest transaction for the given user from the 
+        longest fork.
+
+        Parameters
+        ----------
+
+        user_id: str
+            The user for whom to return the latest transactio no.
+
+        Returns
+        -------
+
+        int:
+            The latest transaction no. if the transaction exists and 
+            -1 otherwise.
+        """
+        if self.longest_fork is None: return -1
+        return self.validator.get_latest_trans(user_id, self.longest_fork.head_block_hash)

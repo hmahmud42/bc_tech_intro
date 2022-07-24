@@ -6,10 +6,11 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Utility functions for creating blocks
+Utility functions for creating blocks for tests.
 """
-from blockchain_proto.transaction import Transaction
-from blockchain_proto.block_creator import create_block
+import numpy as np
+from blockchain_proto.transactions.transaction import Transaction
+from blockchain_proto.blockchain.block_helper import create_block
 
 
 def create_transactions(base_trans):
@@ -29,3 +30,33 @@ def create_transactions(base_trans):
 
     return tr1, tr2, tr3, tr4
 
+
+
+def create_transactions_2(user_nums, base_trans, trans_per_user):
+    """
+    Create the transactions according to the given parameters.
+
+    Parameters
+    ----------
+
+    user_nums: list of int
+        The id-number of the users in the transaction
+
+    base_trans: int
+        The starting point of the different transactions.
+
+    trans_per_user: int
+        The number of transactions per user.
+    """
+    tr_list = []
+    other_users = ['Bikash', 'Jamila', 'Asha', 'Xinping']
+    for i, num in enumerate(user_nums):
+        for t in range(trans_per_user[i]):
+            coins = np.random.randint(low=22, high=44)
+            user = np.random.choice(other_users)
+            tr = Transaction(user_id=f"User {num}",
+                        trans_no=base_trans[i] + t,
+                        trans_str=f"Pay {user} {coins} Gold coins")
+            tr_list.append(tr)
+
+    return tr_list

@@ -1,6 +1,16 @@
+"""
+Copyright 2022 M. M. Hassan Mahmud
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+Tests for creating a BlockSimple
+"""
 from datetime import datetime
-from blockchain_proto.block_simple import BlockHeader, BlockSimple
-from blockchain_proto.transaction import Transaction
+from blockchain_proto.blockchain.block_simple import BlockHeader, BlockSimple
+from blockchain_proto.transactions.transaction import Transaction
 from blockchain_proto.consts import BLOCK_HASH, TRANS_HASH, \
     PREV_BLOCK_HASH, TIMESTAMP, DIFF, NONCE, BLOCK_HEADER, \
     BLOCK_TRANS

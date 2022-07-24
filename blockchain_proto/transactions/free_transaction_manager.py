@@ -5,80 +5,29 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
-Contains classes related to handling transactions.
+Class for managing 'free' transactions (transactions not belonging to a block)
+in a blockchain.
 """
 from typing import List
 from collections import defaultdict
-from datetime import datetime
 import numpy as np
-from blockchain_proto.puzzle import sha_256_hash_string
-from blockchain_proto.consts import *
+from collections import defaultdict
+from blockchain_proto.transactions.transaction import Transaction
+from blockchain_proto.forks.fork_manager import ForkManager
+from blockchain_proto.consts import TRANS_NOT_YET_ADDED
 
 
-class Transaction(object):
-    """
-    Represents a dummy transaction for the proto-blockchain. 
-    This is simply a string with the only constraint that the 
-    length must be < 64. 
-
-    Parameters
-    ----------
-
-    trans_str: str
-        A string describing this transaction.
-    """
-    def __init__(self,  user_id: str, trans_no: int, trans_str: str) -> None:
-        assert len(trans_str) <= 64
-        self.user_id = user_id
-        self.trans_no = trans_no
-        self.trans_str = trans_str
-
-    def validate(self) -> bool:
-        return len(self.trans_str) <= 64
-
-    def __str__(self):
-        return f"{self.user_id} {self.trans_no} {self.trans_str}"
-
-    def __lt__(self, other):
-        if not isinstance(other, Transaction):
-            return True
-        if self.user_id == other.user_id:
-            return self.trans_no < other.trans_no
-        return self.user_id < other.user_id
-
-    def __eq__(self, other):
-        if not isinstance(other, Transaction):
-            return False
-        return self.user_id == other.user_id and self.trans_no == other.trans_no
-
-    def to_json(self):
-        """
-        Returns a json representation of of this transaction.
-
-        Returns
-        -------
-        dict:
-            Json version of this transaction.
-        """
-        return {USER_ID: self.user_id, TRANS_NO: self.trans_no, TRANS_STR: self.trans_str}
-
-    @staticmethod
-    def get_trans_hash(trans_list):
-        return sha_256_hash_string("".join([str(t) for t in trans_list]))
-
-
-class TransactionManager:
+class FreeTransactionManager:
     """
     Maintains the transactions at this node that has not
-    yet been added to any block in any fork.
+    yet been added to any block in any fork - i.e. transactions
+    that are free.
     """
     def __init__(self):
         self.user_curr_trans = defaultdict(lambda : [])
         self.user_curr_trans_no = defaultdict(lambda : [])
         self.user_max_trans = defaultdict(lambda : 0)
-
-        self.num_trans = 0
+        self.size = 0
 
     def trans_was_added(self, trans:Transaction) -> bool:
         return  \
@@ -86,6 +35,19 @@ class TransactionManager:
              trans.trans_no <= self.user_max_trans[trans.user_id]) or \
             (trans.user_id in self.user_curr_trans_no and
              trans.trans_no in self.user_curr_trans_no[trans.user_id])
+
+    def num_free(self):
+        """
+        Returns the number of free transactions being maintained by this 
+        manager.
+
+        Returns
+        -------
+
+        int:
+            Number of free transactions.
+        """
+        return self.size
 
     def add_transaction(self, trans: Transaction):
         """
@@ -102,13 +64,13 @@ class TransactionManager:
 
         self.user_curr_trans[trans.user_id].append(trans)
         self.user_curr_trans_no[trans.user_id].append(trans.trans_no)
-        self.num_trans += 1
+        self.size += 1
         return True
 
     def __len__(self) -> int:
-        return self.num_trans
+        return self.size
 
-    def get_valid_trans(self, last_trans_dict: dict) -> List[Transaction] :
+    def get_valid_trans(self, get_latest_trans) -> List[Transaction] :
         """
         Returns the latest sequence of valid transactions for each user.
         A transaction sequence is valid if: the latest transaction in
@@ -119,13 +81,13 @@ class TransactionManager:
         Parameters
         ----------
 
-        last_trans_dict: dict
-            The latest transactions for the set of users in some
+        get_last_trans: func
+            Function that gets the latest transactions for the set of users in some
             fork.
 
         Return
         ------
-        [Transaction]:
+        list of Transaction:
             The sequence of valid transactions that may be added to the fork without
             violating the constraint that for each user all the transactions
             be in sequence within the fork.
@@ -135,22 +97,21 @@ class TransactionManager:
             all_trans = sorted(self.user_curr_trans[user_id])
             all_trans_no = np.array([trans.trans_no for trans in all_trans])
             # user not in fork the transaction is to be added to.
-            if user_id not in last_trans_dict:
-                # so users first transaction should be numbered 0
-                # if this is not there, don't return the users transaction
+            latest_trans_no = get_latest_trans(user_id)
+            if latest_trans_no == -1:
                 if all_trans[0].trans_no != 0:
                     continue
-                begin = 0
+                first_trans_no = 0
             else:
-                begin = np.where(all_trans_no == last_trans_dict[user_id] + 1)[0]
-                if len(begin) == 0:
+                first_trans_no = np.where(all_trans_no == latest_trans_no + 1)[0]
+                if len(first_trans_no) == 0:
                     continue
-                begin = begin[0]
-            end = np.where( (all_trans_no[1:] - all_trans_no[0:-1]) > 1)[0]
-            if len(end) == 0:
-                ret_trans.extend(all_trans[begin:])
+                first_trans_no = first_trans_no[0]
+            latest_trans_no = np.where( (all_trans_no[1:] - all_trans_no[0:-1]) > 1)[0]
+            if len(latest_trans_no) == 0:
+                ret_trans.extend(all_trans[first_trans_no:])
             else:
-                ret_trans.extend(all_trans[begin:end[0]+1])
+                ret_trans.extend(all_trans[first_trans_no:latest_trans_no[0]+1])
 
         return ret_trans
 
@@ -166,9 +127,16 @@ class TransactionManager:
         sorted_trans_list: [Transaction]
             The list of transactions to remove. For each user
             all the transactions are assumed to have contiguous trans_no.
+
+        Return
+        ------
+
+        list of Transaction:
+            List of transactions for which the removal failed.
         """
-        first_trans = self._remove_trans_in_list(sorted_trans_list)
+        first_trans, remove_failures = self._remove_trans_in_list(sorted_trans_list)
         self._remove_older_transactions(first_trans)
+        return remove_failures
 
     def _remove_trans_in_list(self, sorted_trans_list: List[Transaction]):
         """
@@ -192,21 +160,22 @@ class TransactionManager:
         """
         first_trans = {}
         user_trans_no_dict = defaultdict(lambda : [])
+        remove_failures = []
         # remove transactions in the list
         for trans in sorted_trans_list:
             try:
                 if trans.user_id not in first_trans:
                     first_trans[trans.user_id] = trans.trans_no
                 self.user_curr_trans[trans.user_id].remove(trans)
-                self.user_curr_trans_no[trans.user_id].remove(trans)
-                self.num_trans -= 1
+                self.user_curr_trans_no[trans.user_id].remove(trans.trans_no)
+                self.size -= 1
                 user_trans_no_dict[trans.user_id].append(trans.trans_no)
             except Exception as e:
-                print(e)
+                remove_failures.append(trans)
 
         for user_id in user_trans_no_dict:
-            self.user_max_trans[user_id] = max(user_trans_no_dict[user_id])
-        return first_trans
+            self.user_max_trans[user_id] = min(user_trans_no_dict[user_id])
+        return first_trans, remove_failures
     
     def _remove_older_transactions(self, trans_dict:dict):
         """
@@ -230,7 +199,7 @@ class TransactionManager:
                 filter(lambda t: t <= trans_dict[user_id], 
                        self.user_curr_trans_no[user_id])
             )
-            self.num_trans -= old_len - len(self.user_curr_trans[user_id])
+            self.size -= old_len - len(self.user_curr_trans[user_id])
 
     def to_json(self):
         """

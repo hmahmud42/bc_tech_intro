@@ -8,11 +8,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Miscellaneous functions for creating blocks.
 """
+from collections import OrderedDict
 from datetime import datetime
 from typing import List
-from blockchain_proto.puzzle import sha_256_hash_string, solve_puzzle, check_solution
-from blockchain_proto.transaction import Transaction
-from blockchain_proto.block_simple import BlockHeader, BlockSimple
+from blockchain_proto.blockchain.puzzle import sha_256_hash_string, solve_puzzle, check_solution
+from blockchain_proto.transactions.transaction import Transaction
+from blockchain_proto.blockchain.block_simple import BlockHeader, BlockSimple
+
 
 
 def create_block_hash(trans_hash: str,
@@ -139,3 +141,48 @@ def validate_block_hashes(block: BlockSimple):
                          f" for puzzle {puzzle_string} at difficulty {block.block_header.difficulty}.")
     
     return True
+
+
+class BlockMap:
+    """
+    Simple utility class that wraps around a dictionary
+    to support storing blocks by their headers.
+    """
+
+    def __init__(self):
+        self.map = {}
+
+    def __getitem__(self, block):
+        return self.map[block.hash()]
+
+    def __contains__(self, block):
+        return block.hash() in self.map
+
+    def __len__(self):
+        return len(self.map)
+
+    def add(self, block):
+        self.map[block.hash()] = block
+
+    def remove(self, block):
+        del self.map[block.hash()]
+
+    def get_blocks(self, timestamp):
+        if timestamp is None: 
+            return list(self.map.values())
+        else:
+            return [block for block in self.map.values() 
+                        if block.block_header.timestamp > timestamp]
+        
+
+
+    def to_json(self, timestamp=None):
+        if timestamp is None: 
+            return {block_hash: block.to_json() for block_hash, block in self.map.items()}
+        else:
+            return {block_hash: block.to_json() for block_hash, block in self.map.items()
+                if block.block_header.timestamp > timestamp
+            }
+
+
+

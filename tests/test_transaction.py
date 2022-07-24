@@ -1,10 +1,18 @@
 """
+Copyright 2022 M. M. Hassan Mahmud
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
 Tests for the classes Transaction and TransactionManager.
 """
 from collections import defaultdict
 from blockchain_proto.consts import TRANS_NO, USER_ID, TRANS_STR
-from blockchain_proto.puzzle import sha_256_hash_string
-from blockchain_proto.transaction import Transaction, TransactionManager
+from blockchain_proto.blockchain.puzzle import sha_256_hash_string
+from blockchain_proto.transactions.transaction import Transaction 
+from blockchain_proto.transactions.free_transaction_manager import FreeTransactionManager
 
 
 def test_transaction():
@@ -69,7 +77,7 @@ def test_transaction():
 
 def test_transaction_manager_add():
 
-    trans_manager = TransactionManager()
+    free_trans_manager = FreeTransactionManager()
 
     # test basic addition
     tr1 = Transaction(user_id="User 1",
@@ -79,8 +87,8 @@ def test_transaction_manager_add():
                       trans_no=22,
                       trans_str="Pay Bob 22 Gold coins")
 
-    trans_manager.add_transaction(tr1)
-    trans_manager.add_transaction(tr2)
+    free_trans_manager.add_transaction(tr1)
+    free_trans_manager.add_transaction(tr2)
 
     # test double addition
     tr1_dup = Transaction(user_id="User 1",
@@ -88,7 +96,7 @@ def test_transaction_manager_add():
                           trans_str="Pay Bob 23 Gold coins")
 
     try:
-        trans_manager.add_transaction(tr1_dup)
+        free_trans_manager.add_transaction(tr1_dup)
     except ValueError as ve:
         pass
     else:
@@ -97,7 +105,7 @@ def test_transaction_manager_add():
 
 def test_transaction_manager_get_valid():
     # test getting valid transactions.
-    trans_manager = TransactionManager()
+    free_trans_manager = FreeTransactionManager()
     num_user = 4
     user_trans = []
     num_trans = [12, 10, 11, 22]
@@ -133,11 +141,15 @@ def test_transaction_manager_get_valid():
 
     for user in range(num_user):
         for tr in user_trans[user]:
-            trans_manager.add_transaction(tr)
+            free_trans_manager.add_transaction(tr)
 
     last_trans_dict = {f"User {user}": base_trans_nos[user]-1 for user in range(num_user-1)}
-
-    valid_trans = trans_manager.get_valid_trans(last_trans_dict)
+    def get_latest_trans(user_id):
+        if user_id not in last_trans_dict:
+            return -1
+        return last_trans_dict[user_id]
+    
+    valid_trans = free_trans_manager.get_valid_trans(get_latest_trans)
 
     ret_trans = defaultdict(lambda : [])
     for tr in valid_trans:

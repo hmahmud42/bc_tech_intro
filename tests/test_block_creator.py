@@ -8,10 +8,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Test the creation of blocks.
 """
-from blockchain_proto.block_creator import create_block, validate_block_hashes, \
+from blockchain_proto.blockchain.block_helper import create_block, validate_block_hashes, \
     create_block_hash
-from blockchain_proto.transaction import Transaction
-from blockchain_proto.puzzle import sha_256_hash_string, check_solution
+from blockchain_proto.transactions.transaction import Transaction
+from blockchain_proto.blockchain.puzzle import sha_256_hash_string, check_solution
 from tests.block_creator_for_test import  create_transactions
 
 
