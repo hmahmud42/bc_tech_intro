@@ -129,7 +129,7 @@ class BlockChain(object):
         BlockSimple | str:
             As described in the function description.
         """
-        if incoming_block in self.block_map:
+        if incoming_block.hash() in self.block_map:
             raise ValueError(f"Block with has {incoming_block.block_header.block_hash} was already added.")
 
         ret_val = self.fork_manager.add_blocks([incoming_block])
@@ -138,6 +138,7 @@ class BlockChain(object):
             return ret_val[0]
         
         self.block_map.add(incoming_block)
+        self.free_trans_manager.update_trans_in_inc_block(incoming_block.transactions)
         self.free_trans_manager.remove_older_and_equal_trans(incoming_block.transactions)
         return incoming_block
 
@@ -147,12 +148,19 @@ class BlockChain(object):
         short compared to the longest fork and moves all its transactions into
         the list of transactions that can be added.
         """
-        released_blocks = self.fork_manager.cleanup_forks(self.block_map)
-        for block in released_blocks:
+        released_bhashes = self.fork_manager.cleanup_forks(self.block_map)
+        for bhash in released_bhashes:
+            block = self.block_map[bhash]
             for trans in block.transactions:
-                self.free_trans_manager.add_transaction(trans)
+                try:
+                    self.free_trans_manager.add_transaction(trans)
+                except ValueError as v:
+                    if str(v).startswith("Transaction User"):
+                        continue
+                    else:
+                        raise v
 
-            self.block_map.remove(block)
+            self.block_map.remove(bhash)
 
     def to_json(self):
         """

@@ -152,11 +152,11 @@ class BlockMap:
     def __init__(self):
         self.map = {}
 
-    def __getitem__(self, block):
-        return self.map[block.hash()]
+    def __getitem__(self, bhash):
+        return self.map[bhash]
 
-    def __contains__(self, block):
-        return block.hash() in self.map
+    def __contains__(self, bhash):
+        return bhash in self.map
 
     def __len__(self):
         return len(self.map)
@@ -164,8 +164,8 @@ class BlockMap:
     def add(self, block):
         self.map[block.hash()] = block
 
-    def remove(self, block):
-        del self.map[block.hash()]
+    def remove(self, bhash):
+        del self.map[bhash]
 
     def get_blocks(self, timestamp):
         if timestamp is None: 
@@ -173,8 +173,6 @@ class BlockMap:
         else:
             return [block for block in self.map.values() 
                         if block.block_header.timestamp > timestamp]
-        
-
 
     def to_json(self, timestamp=None):
         if timestamp is None: 

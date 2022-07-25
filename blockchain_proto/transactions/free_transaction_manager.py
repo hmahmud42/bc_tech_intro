@@ -26,7 +26,7 @@ class FreeTransactionManager:
     def __init__(self):
         self.user_curr_trans = defaultdict(lambda : [])
         self.user_curr_trans_no = defaultdict(lambda : [])
-        self.user_max_trans = defaultdict(lambda : 0)
+        self.user_max_trans = defaultdict(lambda : -1)
         self.size = 0
 
     def trans_was_added(self, trans:Transaction) -> bool:
@@ -200,6 +200,21 @@ class FreeTransactionManager:
                        self.user_curr_trans_no[user_id])
             )
             self.size -= old_len - len(self.user_curr_trans[user_id])
+
+    def update_trans_in_inc_block(self, trans_list: List[Transaction]):
+        """
+        Updates the internal data structure to account for the transactions in
+        trans_list.
+
+        Paramters
+        ---------
+
+        trans_list: list of Transaction
+            transaction list to update the internal data structures with.
+        """
+        for trans in trans_list:
+            if trans.trans_no > self.user_max_trans[trans.user_id]:
+                self.user_max_trans[trans.user_id] = trans.trans_no
 
     def to_json(self):
         """
