@@ -60,7 +60,11 @@ class BlockChain(object):
         BlockSimple | str | None:
             As described in the function description.
         """
-        self.free_trans_manager.add_transaction(transaction)
+        try:
+            self.free_trans_manager.add_transaction(transaction)
+        except ValueError as v: 
+            print(f"Error: {str(v)}")
+
         if self.free_trans_manager.num_free() >= self.trans_per_block:
             # TODO: get the latest transactions for the users
             valid_trans = self.free_trans_manager.get_valid_trans(self.fork_manager.get_longest_latest_trans_no)
@@ -84,6 +88,7 @@ class BlockChain(object):
         list(BlockSimple):
             All the blocks added
         """
+        print("Adding new blocks to the chain...")
         trans_to_remove = []
         fork = self.fork_manager.get_longest_fork()
         latest_block_hash = fork.head_block_hash if fork else NULL_BLOCK_HASH
@@ -106,7 +111,7 @@ class BlockChain(object):
             for t in remove_failures:
                 print(t)
         self.cleanup()
-
+        print(f"Added: {len(blocks_added)} blocks.")
         return blocks_added
 
     def add_incoming_block(self, incoming_block: BlockSimple) -> Union[BlockSimple, str]:

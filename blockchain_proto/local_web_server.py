@@ -13,6 +13,8 @@ import zmq
 import click
 
 import logging
+from blockchain_proto.consts import GET_UNADDED_TRANS, GET_BLOCKCHAIN, ADD_TRANS
+
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -38,11 +40,12 @@ class WebServer(object):
     def handle_requests(self):
         pass
 
-def run_webserver(args, context):
+
+def run_webserver(web_interface_port, context):
     host_name = "0.0.0.0"
-    port = args.web_interface_port
-    web_server = WebServer(args.web_interface_port, context)
+    web_server = WebServer(web_interface_port, context)
     app = Flask(__name__)
     app.route('/', web_server.handle_requests)
-    app.run(host=host_name, port=args.web_server_port, debug=False, use_reloader=False)
+    app.route(f'/{}')
+    app.run(host=host_name, port=web_interface_port, debug=False, use_reloader=False)
 

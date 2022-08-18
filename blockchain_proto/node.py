@@ -8,230 +8,313 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Implements a node in the blockchain
 """
-import pickle
-import threading
-import zmq
-import argparse
+from typing import List
+import pickle, threading, zmq, argparse, random, time
+import numpy as np
+from datetime import datetime
 from dateutil.parser import parse
 
 from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
-    INTERFACE_MSG_TYPE, GET_ALL, GET_BLOCK, GET_TRANS_NOT_ADDED, TIMESTAMP_BOUND
-from blockchain_proto.blockchain_ds import BlockChain
-from blockchain_proto.local_web_server import run_webserver
+        GET_BLOCKCHAIN, GET_UNADDED_TRANS, ADD_TRANS
+from blockchain_proto.blockchain.blockchain_ds import BlockChain
+# from blockchain_proto.local_web_server import run_webserver
+from blockchain_proto.blockchain.puzzle import sha_256_hash_string
+from blockchain_proto.transactions.transaction import Transaction
 
 
-class Node(object):
+class Node:
     """
-    Implements a node in the blockchain.
+    Class representing a peer in a blockchain.
     """
     def __init__(self, args, context):
-        self.args = args
+        self.id = args.id
         self.context = context
+        self.gossip_out_port = args.port
+        self.new_peer_notify_port = args.port_new_peer
         self.registry_address = args.registry_address
-        self.publish_address = f"tcp://*:{args.port}"
-        self.new_node_online_address = f"tcp://*:{args.port + 1}"
+        
+        self.gossip_out_socket = context.socket(zmq.PUB)
+        self.gossip_in_socket = context.socket(zmq.SUB)
+        self.new_peer_notify_socket = context.socket(zmq.ROUTER)
+        self.registry_socket = context.socket(zmq.DEALER)
+        self.local_interface_socket = context.socket(zmq.ROUTER)
 
-        self.local_interface_router = context.socket(zmq.ROUTER)
-        self.local_interface_router.bind(f"inproc://local_interface")
+        self.gossip_in_socket.setsockopt_string(zmq.SUBSCRIBE, 'DATA') 
 
-        self.gossip_send_socket = context.socket(zmq.PUB)
-        self.gossip_send_socket.bind(self.publish_address)
+        self.gossip_out_address = f"tcp://*:{self.gossip_out_port}".encode()
+        self.gossip_out_public_address = f"tcp://localhost:{self.gossip_out_port}".encode()
+        self.new_peer_notify_address = f"tcp://*:{self.new_peer_notify_port}".encode()
+        self.new_peer_notify_public_address = f"tcp://localhost:{self.new_peer_notify_port}".encode()
+    
+        self.peer_address_list = []
+        self.peer_notify_address_list = []
+        self.data_received = []
 
-        self.node_response_socket = context.socket(zmq.ROUTER)
-        self.node_response_socket.bind(self.publish_address)
+        self.blockchain = BlockChain(args.trans_per_block, args.difficulty)
 
-        self.gossip_receive_socket = context.socket(zmq.SUBSCRIBE)
-        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, TRANS_GOSSIP)
-        self.gossip_receive_socket.setsockopt(zmq.SUBSCRIBE, BLOCK_GOSSIP)
+        self.initialize()
 
-        self.peers_info = None
-
-        self.bc = BlockChain(args.trans_per_block, args.difficulty)
-        self.add_self_to_registry()
-
-    def add_self_to_registry(self):
+    def initialize(self): 
         """
-        Adds this node to the registry running at the supplied address,
-        and retrieves the addresses of the peers that registered with
-        the registry, notifies them of this node has come on line.
-
-        IDEA: may be poll the registry to update itself - or have the registry
-        refresh its peer directory by polling the nodes.
+        Initialize the sockets by binding and connecting them,
+        register this peer with the registry service, and connect
+        to peers.
         """
-        register_socket = self.context.socket(zmq.DEALER)
-        last_address = self.registry_address
-        register_socket.connect(last_address)
-        self_info = {
-            'publish_address': self.publish_address,
-            'new_node_online_address': self.new_node_online_address
-        }
-        self.peers_info = register_socket.send_json(self_info)
+        self.registry_socket.connect(f"tcp://{self.registry_address}")
+        self.gossip_out_socket.bind(self.gossip_out_address)
+        self.local_interface_socket.bind(f"inproc://local_interface")
+        self.new_peer_notify_socket.bind(self.new_peer_notify_address)
+        # self.peer_address_list, self.peer_notify_address_list = self.register()
+        # self.connect_to_peers()
+        # self.send_iam_online()
 
-        for peer in self.peers_info:
-            register_socket.disconnect(last_address)
-            last_address = peer['new_node_online_address']
-            register_socket.connect(last_address)
-            register_socket.send(bytes(self.publish_address, 'utf-8'))
-
-        register_socket.disconnect(last_address)
-        register_socket.close()
-
-    def run_bc_server(self):
+    def register(self):
         """
-        Runs the blockchain server by handling messages from the local
-        interface, direct messages from other nodes and messages
-        gossiped from other nodes.
+        Registers this node with the registration service, and 
+        returns the list of addresses of peers and the address of 
+        the publish address of the registry service.
+
+        Returns
+        -------
+
+        (str list, str):
+            The list of addresses of peers and the address of the , 
+            publish endpoint of the registry service.
+        """
+        print("Registering node")
+        self.registry_socket.send_multipart([self.gossip_out_public_address, self.new_peer_notify_public_address])
+        registration_reply = self.registry_socket.recv_multipart()
+        print(registration_reply)
+
+        # get the address of other peers
+        peer_address_list = list(set(pickle.loads(registration_reply[1])))
+        print(f"Received address list {peer_address_list}")
+        if self.gossip_out_public_address in peer_address_list:
+            peer_address_list.remove(self.gossip_out_public_address)
+
+        # get the notification address of the other peers
+        peer_notify_address_list = list(set(pickle.loads(registration_reply[2])))
+        print(f"Received new peer notify address list {peer_notify_address_list}")
+        if self.new_peer_notify_public_address in peer_notify_address_list:
+            peer_notify_address_list.remove(self.new_peer_notify_public_address)
+
+        return [pa.decode() for pa in peer_address_list], [pna.decode() for pna in peer_notify_address_list]
+
+    def connect_to_peers(self):
+        """
+        Connects to the peer in self.peer_address_list
+        """
+        for peer_address in self.peer_address_list:
+            print(f"Connecting to peer {peer_address}")
+            self.gossip_in_socket.connect(peer_address)
+            
+    def send_iam_online(self):
+        """
+        Notifies peers that is online and it should start receiving messages.
+        """
+        notify_socket = self.context.socket(zmq.DEALER)
+        for peer_notify_address in self.peer_notify_address_list:
+            print(f"Sending I am online to {peer_notify_address}")
+            notify_socket.connect(peer_notify_address)
+            notify_socket.send_multipart([self.gossip_out_public_address, self.new_peer_notify_public_address])
+        print("Done sending I am online")
+
+    def handle_gossip_in(self, data):
+        """
+        Method to handle the data that was gossiped in.
+
+        Parameters
+        ----------
+
+        data: list of list of bytes
+            The data recieved from the gossip_in_socket. The first
+            element determines the type of the data, the second
+            element gives a pickled object of the given type.
+        """
+        if data[0] == TRANS_GOSSIP:
+            trans = pickle.loads(data[1])
+            print(f"Adding transaction... {str(trans)}")
+            self.blockchain.add_transaction(trans)
+        elif data[1] == BLOCK_GOSSIP: 
+            self.blockchain.add_incoming_block(pickle.loads(data[1]))
+        else:
+            print(f"Error: Unknown gossip message type {data[0]}")
+
+    def handle_local_interface_request(self, request):
+        """
+        Method to handle information received from the local
+        interface socket. The first element contains the socket
+        address where the web server is listening, the second element
+        contains the type of the request, and the third any additional
+        data.
+
+        Parameters
+        ----------
+
+        request: list of list of bytes
+            The request received from the local_interface_socket.
+            The second element gives the type of information requested.
+        """
+        if request[1] == GET_BLOCKCHAIN:
+            bc_json = self.blockchain.to_json()
+            self.local_interface_socket.send_multipart(
+                [request[0], b'', pickle.dumps(bc_json)]
+            )
+
+        if request[1] == GET_UNADDED_TRANS:
+            trans = self.blockchain.get_trans_not_added_json()
+            print(f"Returning Un-added transactions {trans}.")
+            self.local_interface_socket.send_multipart(
+                [request[0], b'', pickle.dumps(trans)]
+            )
+            print("Done sending")
+
+        if request[1] == ADD_TRANS:
+            trans = pickle.loads(request[2])
+            print(f"Adding transaction... {str(trans)}")
+            self.blockchain.add_transaction(trans)
+            self.local_interface_socket.send_multipart(
+                [request[0], b'', request[2]]
+            )
+
+
+    def handle_new_peer(self, new_peer_info):
+        """
+        Method to handle a new peer.
+
+        Parameters
+        ----------
+
+        new_peer_info: list of list of bytes
+            The data recieved from the gossip_in_socket
+        """
+        self.peer_address_list.append(new_peer_info[1].decode())
+        self.peer_notify_address_list.append(new_peer_info[2].decode())
+        print(self.peer_address_list[-1])
+        self.gossip_in_socket.connect(self.peer_address_list[-1])
+        print(f"Connected to new peer that has come online {self.peer_address_list[-1]}")
+
+    def run(self):
+        """
+        Runs the main loop for the node to get data from the data
+        generation process, and gossip it out to existing peers,
+        get data generated by other peers and get addresses of new
+        peers who register with the registry service.
         """
         poller = zmq.Poller()
-        poller.register(self.local_interface_router, zmq.POLLIN)
-        poller.register(self.node_response_socket, zmq.POLLIN)
-        poller.register(self.gossip_receive_socket, zmq.POLLIN)
+        poller.register(self.local_interface_socket, zmq.POLLIN)
+        poller.register(self.gossip_in_socket, zmq.POLLIN)
+        poller.register(self.new_peer_notify_socket, zmq.POLLIN)
 
-        # Process messages from both sockets
+        print("\n\n**** Hello There! ****")
+        print("Local BC-Proto node is now running...")
+        print(f"Port: {self.gossip_out_port}, " + 
+              f"New-Peer-Port: {self.new_peer_notify_port}, " +
+              f"Using registry at: {self.registry_address}")
+
         while True:
-            try:
-                socks = dict(poller.poll())
-            except KeyboardInterrupt:
-                break
+            socks = dict(poller.poll())
 
-            if self.local_interface_router in socks:
-                self.handle_local_interface_request(self.local_interface_router.recv_json())
+            if self.gossip_in_socket in socks:
+                data = self.gossip_in_socket.recv_multipart()
+                self.handle_gossip_in(data)
 
-            if self.node_response_socket in socks:
-                self.handle_new_node_online(self.node_response_socket.recv_multipart())
+            if self.local_interface_socket in socks:
+                print("Local interface request recevied")
+                request = self.local_interface_socket.recv_multipart()
+                self.handle_local_interface_request(request)
 
-            if self.gossip_receive_socket in socks:
-                self.handle_gossiped_message(self.gossip_receive_socket.recv_multipart())
+            if self.new_peer_notify_socket in socks:
+                new_peer_info = self.new_peer_notify_socket.recv_multipart()
+                self.handle_new_peer(new_peer_info)
 
-    def handle_new_node_online(self, msg: [bytes]) -> None:
-        """
-        Handles the coming of a new node online by sending subscribing to it.
-
-        Parameters
-        ----------
-
-        msg: [bytes]
-            The message from the new node, with msg[2] containng the ip
-            address of the node.
-        """
-        try:
-            msg = self.node_response_socket.recv_multipart()
-            self.gossip_send_socket.connect(msg[2].decode('utf-8'))
-        except Exception as e:
-            print(e)
-            print(f"Message Received: {msg}")
-
-    def gossip_object(self, obj_type: bytes, obj: object) -> None:
-        """
-        Gossips a pickle-serialized version of the the object using
-        the
-
-        Parameters
-        ----------
-
-        obj_type: bytes
-            The object type specified in bytes
-
-        obj: object
-            The object to serialize and send
-        """
-        self.gossip_send_socket.send_multipart([obj_type, pickle.dumps(obj)])
-
-    def handle_local_interface_request(self, json_msg):
-        """
-        Handles information request from the local webserver showing blockchain
-        information to the local user. The information requested can be one of:
-        all the data in the block, blocks with timestamp more recent than a
-        given timestamp, all the transactions that have not been added so far.
-
-        Parameters
-        ----------
-        json_msg: dict
-            The json message with information request.
-
-        Returns
-        -------
-        dict:
-            The information requested in json format.
-        """
-        if json_msg[INTERFACE_MSG_TYPE] == GET_ALL:
-            return self.bc.to_json()
-
-        if json_msg[INTERFACE_MSG_TYPE] == GET_BLOCK:
-            return self.bc.get_blocks_newer_json(parse(json_msg[TIMESTAMP_BOUND]))
-
-        if json_msg[INTERFACE_MSG_TYPE] == GET_TRANS_NOT_ADDED:
-            return self.bc.get_trans_not_added_json()
-
-    def handle_gossiped_message(self, msg: [bytes]):
-        """
-        Handles messages gossiped from a local node.
-
-        Parameters
-        ----------
-        msg: [bytes]
-            Messages gossiped from a other nodes.
-
-        Returns
-        -------
-        dict:
-            The information requested in json format.
-        """
-        if msg[0] == TRANS_GOSSIP:
-            trans = pickle.loads(msg[1])
-            try:
-                blocks_added = self.bc.add_transaction(trans)
-                self.gossip_object(TRANS_GOSSIP, pickle.dumps(trans))
-                if blocks_added is not None:
-                    for block in blocks_added:
-                        self.gossip_object(BLOCK_GOSSIP, pickle.dumps(block))
-            except ValueError as v:
-                # This means transaction was previously added - so do nothing
-                pass
-
-        elif msg[0] == BLOCK_GOSSIP:
-            block = pickle.load(msg[1])
-            try:
-                self.bc.add_incoming_block(block)
-                self.gossip_object(BLOCK_GOSSIP, pickle.dumps(block))
-            except ValueError as v:
-                # This means block was previously added
-                pass
 
 
 def parseargs():
+    """
+    Parse the arguments.
+    """
     parser = argparse.ArgumentParser(description='Runs a Blockchain node.')
-    parser.add_argument('--registry-address',
-                        help='address of where the registry service is running.',
-                        required=True
-                        )
     parser.add_argument('--port',
-                        help='port where the blockchain node will listen.',
-                        required=True
-                        )
-    parser.add_argument('--web-interface-port',
-                        help='port where the web interface will be run from.',
-                        required=True
-                        )
+                        help="Port where the node will listen for incoming"+
+                            "messages from peers.",
+                        required=True)
+    parser.add_argument('--port-new-peer',
+                        help="Port where the node will listen for new peers",
+                        required=True)
+    # parser.add_argument('--web-interface-port',
+    #                     help='Port where the web interface will be run from.',
+    #                     required=True)
+    parser.add_argument('--registry-address',
+                        help='Address of where the registry service is running.' +
+                        "must of the form 'host-ip:port'",
+                        required=True)
     parser.add_argument('--trans-per-block',
                         help='Number of transactions allowed per block in the chain.',
-                        default=10,
-                        required=False
-                        )
+                        default=10, type=int, required=False)
     parser.add_argument('--difficulty',
                         help='Difficulty level for the puzzles in the blockchain.',
-                        difficulty=2,
-                        required=True
-                        )
+                        default=2, type=int, required=False)
     return parser.parse_args()
+
+
+
+def create_transactions_2(user_nums, base_trans, trans_per_user):
+    """
+    Create the transactions according to the given parameters.
+
+    Parameters
+    ----------
+
+    user_nums: list of int
+        The id-number of the users in the transaction
+
+    base_trans: list of int
+        The starting point of the different transactions.
+
+    trans_per_user: list of int
+        The number of transactions per user.
+    """
+    tr_list = []
+    other_users = ['Bikash', 'Jamila', 'Asha', 'Xinping']
+    for i, num in enumerate(user_nums):
+        for t in range(trans_per_user[i]):
+            coins = np.random.randint(low=22, high=44)
+            user = np.random.choice(other_users)
+            tr = Transaction(user_id=f"User {num}",
+                        trans_no=base_trans[i] + t,
+                        trans_str=f"Pay {user} {coins} Gold coins")
+            tr_list.append(tr)
+
+    return tr_list
+
+
+def test_local(context):
+    local_interface_socket = context.socket(zmq.DEALER)
+    local_interface_socket.connect(f"inproc://local_interface")
+    trans = create_transactions_2([1], [0], [10])
+    for tran in trans:
+        local_interface_socket.send_multipart([
+            ADD_TRANS, pickle.dumps(tran)])
+        local_interface_socket.recv_multipart()
+    
+    local_interface_socket.send_multipart([GET_UNADDED_TRANS])
+    unadded_trans = local_interface_socket.recv_multipart()
+    
+    print(f"Transactions not yet added: {pickle.loads(unadded_trans[1])}")
 
 
 def run():
     args = parseargs()
     context = zmq.Context()
-    node = Node(args, context)
-    threading.Thread(target=lambda: node.run_bc_server()).start()
-    threading.Thread(target=lambda: run_webserver(args, context)).start()
+    setattr(args, "id", sha_256_hash_string(str(datetime.now) + str(random.randint(0, 10000))))
+    node = Node(context=context, args=args)
+    threading.Thread(target=lambda: node.run()).start()
+    # threading.Thread(target=lambda: run_webserver(args.web_interface_port, 
+    #                                               context)).start()
+    threading.Thread(target=lambda: test_local(context)).start()
+
+
 
 
 if __name__ == "__main__":

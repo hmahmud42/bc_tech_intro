@@ -12,6 +12,10 @@ Constants used in the project.
 NULL_BLOCK_HASH = "NULL-BLOCK-HASH"
 TRANS_GOSSIP = b'transaction'
 BLOCK_GOSSIP = b'block'
+GET_BLOCKCHAIN = b'get_blockchain'
+GET_UNADDED_TRANS = b'get_unadded_trans'
+ADD_TRANS = b'add_trans'
+
 
 USER_ID = 'user_id'
 TRANS_NO = 'trans_no'
