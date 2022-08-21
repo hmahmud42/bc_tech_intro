@@ -166,7 +166,7 @@ class BlockChain(object):
                         raise v
 
             self.block_map.remove(bhash)
-
+        
     def to_json(self):
         """
         Returns json version of this BlockChain
@@ -198,6 +198,12 @@ class BlockChain(object):
 
     def get_trans_not_added_json(self):
         """
-        Returns transactions which have not been added so far.
+        Returns transactions which have not been added so far in json format.
         """
         return self.free_trans_manager.to_json()
+
+    def get_trans_not_added(self):
+        """
+        Returns transactions which have not been added so far.
+        """
+        return self.free_trans_manager.get_trans_list()

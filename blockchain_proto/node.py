@@ -64,9 +64,9 @@ class Node:
         self.gossip_out_socket.bind(self.gossip_out_address)
         self.local_interface_socket.bind(f"inproc://local_interface")
         self.new_peer_notify_socket.bind(self.new_peer_notify_address)
-        # self.peer_address_list, self.peer_notify_address_list = self.register()
-        # self.connect_to_peers()
-        # self.send_iam_online()
+        self.peer_address_list, self.peer_notify_address_list = self.register()
+        self.connect_to_peers()
+        self.send_iam_online()
 
     def register(self):
         """
@@ -81,7 +81,7 @@ class Node:
             The list of addresses of peers and the address of the , 
             publish endpoint of the registry service.
         """
-        print("Registering node")
+        print(f"Registering node with registry at: {self.registry_address}")
         self.registry_socket.send_multipart([self.gossip_out_public_address, self.new_peer_notify_public_address])
         registration_reply = self.registry_socket.recv_multipart()
         print(registration_reply)
@@ -117,6 +117,13 @@ class Node:
             print(f"Sending I am online to {peer_notify_address}")
             notify_socket.connect(peer_notify_address)
             notify_socket.send_multipart([self.gossip_out_public_address, self.new_peer_notify_public_address])
+            blocks_trans = notify_socket.recv_multipart()
+            blocks_trans = pickle.loads(blocks_trans[1])
+            for block in blocks_trans[0]:
+                self.blockchain.add_incoming_block(block)
+            for trans in blocks_trans[1]:
+                self.blockchain.add_transaction(trans)
+
         print("Done sending I am online")
 
     def handle_gossip_in(self, data):
@@ -190,6 +197,11 @@ class Node:
         """
         self.peer_address_list.append(new_peer_info[1].decode())
         self.peer_notify_address_list.append(new_peer_info[2].decode())
+        self.new_peer_notify_socket.send_multipart([
+            new_peer_info[0], b'',
+            pickle.dumps([list(self.blockchain.block_map.values()), self.blockchain.get_trans_not_added()])
+        ])
+
         print(self.peer_address_list[-1])
         self.gossip_in_socket.connect(self.peer_address_list[-1])
         print(f"Connected to new peer that has come online {self.peer_address_list[-1]}")
@@ -255,6 +267,9 @@ def parseargs():
     parser.add_argument('--difficulty',
                         help='Difficulty level for the puzzles in the blockchain.',
                         default=2, type=int, required=False)
+    parser.add_argument('--user-id',
+                        help='User id ro test.',
+                        default=1, type=int, required=False)
     return parser.parse_args()
 
 
@@ -289,10 +304,10 @@ def create_transactions_2(user_nums, base_trans, trans_per_user):
     return tr_list
 
 
-def test_local(context):
+def test_local(context, user_id):
     local_interface_socket = context.socket(zmq.DEALER)
     local_interface_socket.connect(f"inproc://local_interface")
-    trans = create_transactions_2([1], [0], [10])
+    trans = create_transactions_2([user_id], [0], [10])
     for tran in trans:
         local_interface_socket.send_multipart([
             ADD_TRANS, pickle.dumps(tran)])
@@ -312,7 +327,7 @@ def run():
     threading.Thread(target=lambda: node.run()).start()
     # threading.Thread(target=lambda: run_webserver(args.web_interface_port, 
     #                                               context)).start()
-    threading.Thread(target=lambda: test_local(context)).start()
+    threading.Thread(target=lambda: test_local(context, args.user_id)).start()
 
 
 

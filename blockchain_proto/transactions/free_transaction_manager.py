@@ -216,6 +216,17 @@ class FreeTransactionManager:
             if trans.trans_no > self.user_max_trans[trans.user_id]:
                 self.user_max_trans[trans.user_id] = trans.trans_no
 
+    def get_trans_list(self):
+        """
+        Returns a json representation of of the data in the transaction manager.
+
+        Returns
+        -------
+        list of trans:
+            Returns the list of the transactions
+        """
+        return list(self.user_curr_trans.values())
+
     def to_json(self):
         """
         Returns a json representation of of the data in the transaction manager.

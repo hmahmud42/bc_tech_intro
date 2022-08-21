@@ -182,5 +182,6 @@ class BlockMap:
                 if block.block_header.timestamp > timestamp
             }
 
-
+    def values(self):
+        return self.map.values()
 

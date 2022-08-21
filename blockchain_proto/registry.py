@@ -8,11 +8,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Implements the registry service in the blockchain
 """
-import zmq
-import pickle
+import zmq, pickle, argparse
 
 
-def run(registry_port=5001, new_node_port=5002):
+def run(registry_port=5001):
     
     context = zmq.Context()
 
@@ -38,5 +37,19 @@ def run(registry_port=5001, new_node_port=5002):
             notify_address_list.append(message[2])
 
 
+def parseargs():
+    """
+    Parse the arguments.
+    """
+    parser = argparse.ArgumentParser(description='Runs a Blockchain node.')
+    parser.add_argument('--port',
+                        help="Port where the registry will listen for for new ndoes.",
+                        type=int,
+                        required=True)
+    return parser.parse_args()
+
+
+
 if __name__ == '__main__':
-    run()
+    args = parseargs()
+    run(args.port)
