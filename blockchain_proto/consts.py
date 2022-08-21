@@ -15,7 +15,8 @@ BLOCK_GOSSIP = b'block'
 GET_BLOCKCHAIN = b'get_blockchain'
 GET_UNADDED_TRANS = b'get_unadded_trans'
 ADD_TRANS = b'add_trans'
-
+NEW_PEER = b'new_peer'
+BLOCKS_AND_TRANS = b'blocks_trans'
 
 USER_ID = 'user_id'
 TRANS_NO = 'trans_no'

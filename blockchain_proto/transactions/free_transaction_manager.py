@@ -225,7 +225,7 @@ class FreeTransactionManager:
         list of trans:
             Returns the list of the transactions
         """
-        return list(self.user_curr_trans.values())
+        return [trans for user_id in self.user_curr_trans for trans in self.user_curr_trans[user_id]]
 
     def to_json(self):
         """

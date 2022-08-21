@@ -15,7 +15,7 @@ from datetime import datetime
 from dateutil.parser import parse
 
 from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
-        GET_BLOCKCHAIN, GET_UNADDED_TRANS, ADD_TRANS
+        GET_BLOCKCHAIN, GET_UNADDED_TRANS, ADD_TRANS, NEW_PEER, BLOCKS_AND_TRANS
 from blockchain_proto.blockchain.blockchain_ds import BlockChain
 # from blockchain_proto.local_web_server import run_webserver
 from blockchain_proto.blockchain.puzzle import sha_256_hash_string
@@ -35,7 +35,7 @@ class Node:
         
         self.gossip_out_socket = context.socket(zmq.PUB)
         self.gossip_in_socket = context.socket(zmq.SUB)
-        self.new_peer_notify_socket = context.socket(zmq.ROUTER)
+        self.special_requests_socket = context.socket(zmq.ROUTER)
         self.registry_socket = context.socket(zmq.DEALER)
         self.local_interface_socket = context.socket(zmq.ROUTER)
 
@@ -63,7 +63,7 @@ class Node:
         self.registry_socket.connect(f"tcp://{self.registry_address}")
         self.gossip_out_socket.bind(self.gossip_out_address)
         self.local_interface_socket.bind(f"inproc://local_interface")
-        self.new_peer_notify_socket.bind(self.new_peer_notify_address)
+        self.special_requests_socket.bind(self.new_peer_notify_address)
         self.peer_address_list, self.peer_notify_address_list = self.register()
         self.connect_to_peers()
         self.send_iam_online()
@@ -116,13 +116,7 @@ class Node:
         for peer_notify_address in self.peer_notify_address_list:
             print(f"Sending I am online to {peer_notify_address}")
             notify_socket.connect(peer_notify_address)
-            notify_socket.send_multipart([self.gossip_out_public_address, self.new_peer_notify_public_address])
-            blocks_trans = notify_socket.recv_multipart()
-            blocks_trans = pickle.loads(blocks_trans[1])
-            for block in blocks_trans[0]:
-                self.blockchain.add_incoming_block(block)
-            for trans in blocks_trans[1]:
-                self.blockchain.add_transaction(trans)
+            notify_socket.send_multipart([NEW_PEER, self.gossip_out_public_address, self.new_peer_notify_public_address])
 
         print("Done sending I am online")
 
@@ -138,14 +132,17 @@ class Node:
             element determines the type of the data, the second
             element gives a pickled object of the given type.
         """
-        if data[0] == TRANS_GOSSIP:
-            trans = pickle.loads(data[1])
-            print(f"Adding transaction... {str(trans)}")
-            self.blockchain.add_transaction(trans)
-        elif data[1] == BLOCK_GOSSIP: 
-            self.blockchain.add_incoming_block(pickle.loads(data[1]))
-        else:
-            print(f"Error: Unknown gossip message type {data[0]}")
+        try:
+            if data[0] == TRANS_GOSSIP:
+                trans = pickle.loads(data[1])
+                print(f"Adding transaction... {str(trans)}")
+                self.blockchain.add_transaction(trans)
+            elif data[1] == BLOCK_GOSSIP: 
+                    self.blockchain.add_incoming_block(pickle.loads(data[1]))
+            else:
+                print(f"Error: Unknown gossip message type {data[0]}")
+        except Exception as e:
+            print("Error when trying to handle gossiped in message {e}")
 
     def handle_local_interface_request(self, request):
         """
@@ -168,7 +165,7 @@ class Node:
                 [request[0], b'', pickle.dumps(bc_json)]
             )
 
-        if request[1] == GET_UNADDED_TRANS:
+        elif request[1] == GET_UNADDED_TRANS:
             trans = self.blockchain.get_trans_not_added_json()
             print(f"Returning Un-added transactions {trans}.")
             self.local_interface_socket.send_multipart(
@@ -176,13 +173,30 @@ class Node:
             )
             print("Done sending")
 
-        if request[1] == ADD_TRANS:
+        elif request[1] == ADD_TRANS:
             trans = pickle.loads(request[2])
             print(f"Adding transaction... {str(trans)}")
             self.blockchain.add_transaction(trans)
             self.local_interface_socket.send_multipart(
                 [request[0], b'', request[2]]
             )
+        else:
+            print(f"Unknown request {request[1]} via the local interface.")
+        
+
+    def add_blocks_trans(self, request):
+        """
+        Adds blocks and transactions received from a new peer that has just connected.
+
+        request: list of byte strings
+            Data recevied from the peer.
+        """
+        blocks_trans = pickle.loads(request[2])
+        print(blocks_trans)
+        for block in blocks_trans[0]:
+            self.blockchain.add_incoming_block(block)
+        for trans in blocks_trans[1]:
+            self.blockchain.add_transaction(trans)
 
 
     def handle_new_peer(self, new_peer_info):
@@ -195,16 +209,17 @@ class Node:
         new_peer_info: list of list of bytes
             The data recieved from the gossip_in_socket
         """
-        self.peer_address_list.append(new_peer_info[1].decode())
-        self.peer_notify_address_list.append(new_peer_info[2].decode())
-        self.new_peer_notify_socket.send_multipart([
-            new_peer_info[0], b'',
-            pickle.dumps([list(self.blockchain.block_map.values()), self.blockchain.get_trans_not_added()])
-        ])
+        print(f"New peer info : {new_peer_info}")
+        self.peer_address_list.append(new_peer_info[2].decode())
+        self.peer_notify_address_list.append(new_peer_info[3].decode())
 
-        print(self.peer_address_list[-1])
         self.gossip_in_socket.connect(self.peer_address_list[-1])
-        print(f"Connected to new peer that has come online {self.peer_address_list[-1]}")
+        send_blocks_trans_socket = self.context.socket(zmq.DEALER   )
+        send_blocks_trans_socket.connect(self.peer_notify_address_list[-1])
+        data = pickle.dumps( [self.blockchain.get_block_list(), self.blockchain.get_trans_not_added()])
+        send_blocks_trans_socket.send_multipart([BLOCKS_AND_TRANS, data])
+
+        print(f"Connected to new peer that has come online {self.peer_address_list[-1]} and sent it my blocks/trans.")
 
     def run(self):
         """
@@ -216,7 +231,7 @@ class Node:
         poller = zmq.Poller()
         poller.register(self.local_interface_socket, zmq.POLLIN)
         poller.register(self.gossip_in_socket, zmq.POLLIN)
-        poller.register(self.new_peer_notify_socket, zmq.POLLIN)
+        poller.register(self.special_requests_socket, zmq.POLLIN)
 
         print("\n\n**** Hello There! ****")
         print("Local BC-Proto node is now running...")
@@ -236,10 +251,14 @@ class Node:
                 request = self.local_interface_socket.recv_multipart()
                 self.handle_local_interface_request(request)
 
-            if self.new_peer_notify_socket in socks:
-                new_peer_info = self.new_peer_notify_socket.recv_multipart()
-                self.handle_new_peer(new_peer_info)
-
+            if self.special_requests_socket in socks:
+                request = self.special_requests_socket.recv_multipart()
+                if request[1] == NEW_PEER:
+                    self.handle_new_peer(request)
+                elif request[1] == BLOCKS_AND_TRANS:
+                    self.add_blocks_trans(request)
+                else:
+                    print(f"Error: unknown message type in additional_request socket: {request[1]}")
 
 
 def parseargs():

@@ -18,6 +18,7 @@ from blockchain_proto.forks.fork import Fork
 from blockchain_proto.forks.fork_manager import ForkManager
 from blockchain_proto.blockchain.block_helper import create_block, BlockMap
 from blockchain_proto.consts import *
+from blockchain_proto.messages import block_was_already_added_msg
 
 
 class BlockChain(object):
@@ -135,7 +136,7 @@ class BlockChain(object):
             As described in the function description.
         """
         if incoming_block.hash() in self.block_map:
-            raise ValueError(f"Block with has {incoming_block.block_header.block_hash} was already added.")
+            raise ValueError(block_was_already_added_msg(incoming_block.block_header.block_hash))
 
         ret_val = self.fork_manager.add_blocks([incoming_block])
         if ret_val[0] != 1:
@@ -207,3 +208,9 @@ class BlockChain(object):
         Returns transactions which have not been added so far.
         """
         return self.free_trans_manager.get_trans_list()
+
+    def get_block_list(self):
+        """
+        Returns all the blocks in list form.
+        """
+        return list(self.block_map.values())
