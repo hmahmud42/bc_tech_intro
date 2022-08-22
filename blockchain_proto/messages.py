@@ -6,7 +6,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Contains some error messages
+Contains some error messages and logging wrapper.
 """
 from blockchain_proto.consts import node_id_global
 

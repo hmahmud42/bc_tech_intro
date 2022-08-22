@@ -43,7 +43,7 @@ class ForkManager:
         """
         return self.longest_fork
 
-    def fork_length(self, fork):
+    def fork_length(self, fork: Fork) -> int:
         """
         Returns the length of the given fork
 
@@ -59,7 +59,7 @@ class ForkManager:
         """
         return self.block_depth_manager.get_depth(fork.block_hash)
 
-    def num_forks(self):
+    def num_forks(self) -> int:
         """
         Returns the number of forks in the fork manager.
 
@@ -71,7 +71,7 @@ class ForkManager:
         """
         return len(self.forks)
 
-    def _find_insert_fork(self, block):
+    def _find_insert_fork(self, block: BlockSimple) -> Fork:
         """
         Find the fork that block should go into and None
         if no such fork can be found.
@@ -91,7 +91,7 @@ class ForkManager:
         return self.fork_hashes[block.prev_hash()] \
             if block.prev_hash() in self.fork_hashes else None
 
-    def _add_new_fork(self, block):
+    def _add_new_fork(self, block: BlockSimple) -> Fork:
         """
         Changes the head of the block to point to this new block.
 
@@ -138,7 +138,7 @@ class ForkManager:
         fork.num_blocks = self.block_depth_manager.get_depth(block.hash())
         self.fork_hashes[fork.head_block_hash] = fork
 
-    def add_blocks(self, blocks_added: List[BlockSimple]) -> None:
+    def add_blocks(self, blocks_added: List[BlockSimple]) -> List[str]:
         """
         Adds the given blocks to the appropriate fork, or creates a new
         one if none exists
@@ -177,7 +177,7 @@ class ForkManager:
         
         return add_status
 
-    def get_block_hashes_in_fork(self, fork:Fork, block_map):
+    def get_block_hashes_in_fork(self, fork:Fork, block_map) -> List[str]:
         """
         Returns all the hashes for the given fork.
 
@@ -243,9 +243,9 @@ class ForkManager:
         }
 
 
-    def get_longest_latest_trans_no(self, user_id:str):
+    def get_longest_latest_trans_no(self, user_id: str) -> int:
         """
-        Gets the latest transaction for the given user from the 
+        Gets the latest transaction for the given user from the
         longest fork.
 
         Parameters
@@ -258,7 +258,7 @@ class ForkManager:
         -------
 
         int:
-            The latest transaction no. if the transaction exists and 
+            The latest transaction no. if the transaction exists and
             -1 otherwise.
         """
         if self.longest_fork is None: return -1

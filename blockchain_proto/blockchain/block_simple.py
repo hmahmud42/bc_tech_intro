@@ -6,7 +6,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Implements a simplified version of a block data structure
+Implements a simplified version of a block data structure.
 """
 from datetime import datetime
 from typing import List
@@ -32,7 +32,7 @@ class BlockHeader(object):
         self.difficulty = difficulty
         self.nonce = nonce
 
-    def to_json(self):
+    def to_json(self) -> dict:
         """
         Returns json version of this BlockHeader
 
@@ -59,14 +59,14 @@ class BlockSimple(object):
         self.block_header = block_header
         self.transactions = transactions
 
-    def hash(self):
+    def hash(self) -> str:
         return self.block_header.block_hash
 
-    def prev_hash(self):
+    def prev_hash(self) -> str:
         return self.block_header.prev_block_hash
 
 
-    def to_json(self):
+    def to_json(self) -> dict:
         """
         Returns json version of this BlockSimple
 

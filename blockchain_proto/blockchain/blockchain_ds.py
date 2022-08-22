@@ -37,7 +37,7 @@ class BlockChain(object):
     difficulty: int
         The level of difficulty level for the puzzles in the blockchain.
     """
-    def __init__(self, trans_per_block: int, difficulty: int) -> None:
+    def __init__(self, trans_per_block: int, difficulty: int):
         self.trans_per_block = trans_per_block
         self.difficulty = difficulty
         self.block_map = BlockMap()
@@ -188,32 +188,82 @@ class BlockChain(object):
             FORK_DATA: self.fork_manager.to_json()
         }
 
-    def get_blocks_newer(self, timestamp):
+    def get_blocks_newer(self, timestamp) -> List[BlockSimple]:
         """
         Returns blocks which are newer than the given timestamp.
+
+        Parameters
+        ----------
+
+        timestamp: datetime 
+            The lower bound on the datetime
+
+        Returns
+        -------
+
+        list of BlockSimple:
+            Returns the blocks with timestamp newer than the given timestamp.
         """
         return self.block_map.get_blocks(timestamp)
 
-    def get_blocks_newer_json(self, timestamp):
+    def get_blocks_newer_json(self, timestamp) -> dict:
         """
         Returns json of blocks which are newer than the given timestamp.
+
+        Parameters
+        ----------
+
+        timestamp: datetime 
+            The lower bound on the datetime
+
+        Returns
+        -------
+
+        dict:
+            The blocks with timestamp newer than the given timestamp in dict/json form.
         """
         return self.block_map.to_json(timestamp)
 
-    def get_trans_not_added_json(self):
+    def get_trans_not_added_json(self) -> dict:
         """
         Returns transactions which have not been added so far in json format.
+
+        Parameters
+        ----------
+
+        timestamp: datetime 
+            The lower bound on the datetime
+
+        Returns
+        -------
+
+        dict:
+            The transactionss with timestamp newer than the given timestamp in dict/json form.
+
         """
         return self.free_trans_manager.to_json()
 
-    def get_trans_not_added(self):
+    def get_trans_not_added(self) -> List[Transaction]:
         """
         Returns transactions which have not been added so far.
+
+        Returns
+        -------
+
+        list of Transaction:
+            Returns list of transactions not yet added.
         """
         return self.free_trans_manager.get_trans_list()
 
-    def get_block_list(self):
+    def get_block_list(self) -> List[BlockSimple]:
         """
         Returns all the blocks in list form.
+
+        Returns
+        -------
+
+        list of BlockSimple:
+            Returns list of blocks in the blockchain.
+
         """
         return list(self.block_map.values())

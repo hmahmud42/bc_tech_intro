@@ -6,9 +6,9 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Implements a node in the blockchain
+Implements a node in the blockchain.
 """
-from typing import List
+from typing import List, Tuple
 import pickle, threading, zmq, argparse, random, time, logging
 import numpy as np
 from datetime import datetime
@@ -72,7 +72,7 @@ class Node:
         self.connect_to_peers()
         self.send_iam_online()
 
-    def register(self):
+    def register(self) -> Tuple[List[str], List[str]]:
         """
         Registers this node with the registration service, and 
         returns the list of addresses of peers and the address of 
@@ -81,7 +81,7 @@ class Node:
         Returns
         -------
 
-        (str list, str):
+        (list str, list str):
             The list of addresses of peers and the address of the , 
             publish endpoint of the registry service.
         """
@@ -125,14 +125,14 @@ class Node:
 
         log_info(logging, "Done notifying peers.")
 
-    def handle_gossip_in(self, data):
+    def handle_gossip_in(self, data: List[bytes]):
         """
         Method to handle the data that was gossiped in.
 
         Parameters
         ----------
 
-        data: list of list of bytes
+        data: list bytes
             The data recieved from the gossip_in_socket. The first
             element determines the type of the data, the second
             element gives a pickled object of the given type.
@@ -149,7 +149,7 @@ class Node:
         except Exception as e:
             log_error(logging, "When trying to handle gossiped-in message encountered: {e}")
 
-    def handle_local_interface_request(self, request):
+    def handle_local_interface_request(self, request: List[bytes]):
         """
         Method to handle information received from the local
         interface socket. The first element contains the socket
@@ -160,7 +160,7 @@ class Node:
         Parameters
         ----------
 
-        request: list of list of bytes
+        request: list of bytes
             The request received from the local_interface_socket.
             The second element gives the type of information requested.
         """
@@ -188,11 +188,11 @@ class Node:
             log_warning(logging, f"Unknown request {request[1]} via the local interface.")
         
 
-    def add_blocks_trans(self, request):
+    def add_blocks_trans(self, request: List[bytes]):
         """
         Adds blocks and transactions received from a new peer that has just connected.
 
-        request: list of byte strings
+        request: list of bytes
             Data recevied from the peer.
         """
         blocks_trans = pickle.loads(request[2])
@@ -203,14 +203,14 @@ class Node:
         for trans in blocks_trans[1]:
             self.blockchain.add_transaction(trans)
 
-    def handle_new_peer(self, new_peer_info):
+    def handle_new_peer(self, new_peer_info: List[bytes]):
         """
         Method to handle a new peer.
 
         Parameters
         ----------
 
-        new_peer_info: list of list of bytes
+        new_peer_info: list of bytes
             The data recieved from the gossip_in_socket
         """
         self.peer_address_list.append(new_peer_info[2].decode())

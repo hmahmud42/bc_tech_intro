@@ -24,7 +24,7 @@ class Transaction(object):
     trans_str: str
         A string describing this transaction.
     """
-    def __init__(self,  user_id: str, trans_no: int, trans_str: str) -> None:
+    def __init__(self,  user_id: str, trans_no: int, trans_str: str):
         assert len(trans_str) <= 64
         self.user_id = user_id
         self.trans_no = trans_no
@@ -33,22 +33,22 @@ class Transaction(object):
     def validate(self) -> bool:
         return len(self.trans_str) <= 64
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user_id}: [{self.trans_no}] {self.trans_str}"
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if not isinstance(other, Transaction):
             return True
         if self.user_id == other.user_id:
             return self.trans_no < other.trans_no
         return self.user_id < other.user_id
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if not isinstance(other, Transaction):
             return False
         return self.user_id == other.user_id and self.trans_no == other.trans_no
 
-    def to_json(self):
+    def to_json(self) -> dict:
         """
         Returns a json representation of of this transaction.
 

@@ -8,7 +8,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Class for managing 'free' transactions (transactions not belonging to a block)
 in a blockchain.
 """
-from typing import List
+from typing import List, Tuple
 from collections import defaultdict
 import numpy as np
 from collections import defaultdict
@@ -36,7 +36,7 @@ class FreeTransactionManager:
             (trans.user_id in self.user_curr_trans_no and
              trans.trans_no in self.user_curr_trans_no[trans.user_id])
 
-    def num_free(self):
+    def num_free(self) -> int:
         """
         Returns the number of free transactions being maintained by this 
         manager.
@@ -49,7 +49,7 @@ class FreeTransactionManager:
         """
         return self.size
 
-    def add_transaction(self, trans: Transaction):
+    def add_transaction(self, trans: Transaction) -> bool:
         """
         Adds a transaction to the list of transactions not yet added
         Raises a ValueError if the transaction was added before.
@@ -115,7 +115,7 @@ class FreeTransactionManager:
 
         return ret_trans
 
-    def remove_older_and_equal_trans(self, sorted_trans_list: List[Transaction]) -> None:
+    def remove_older_and_equal_trans(self, sorted_trans_list: List[Transaction]) -> List[Transaction]:
         """
         For each user removes from the dictionary of user transactions all the
         transactions that are in the given list, and also all the transactions
@@ -138,7 +138,7 @@ class FreeTransactionManager:
         self._remove_older_transactions(first_trans)
         return remove_failures
 
-    def _remove_trans_in_list(self, sorted_trans_list: List[Transaction]):
+    def _remove_trans_in_list(self, sorted_trans_list: List[Transaction]) -> Tuple[dict, list]:
         """
         For each user removes all the transactions that are in the
         given list from the dictionary of user transactions.
@@ -154,9 +154,9 @@ class FreeTransactionManager:
         Returns
         -------
 
-        dict:
-            Dictionary of all first transactions in the list for each 
-            user.
+        dict, list:
+            Dictionary of all first transactions in the list for each
+            user, and removals which failed.
         """
         first_trans = {}
         user_trans_no_dict = defaultdict(lambda : [])
@@ -177,7 +177,7 @@ class FreeTransactionManager:
             self.user_max_trans[user_id] = min(user_trans_no_dict[user_id])
         return first_trans, remove_failures
     
-    def _remove_older_transactions(self, trans_dict:dict):
+    def _remove_older_transactions(self, trans_dict: dict) -> dict:
         """
         For each user in trans_dict, removes all the transactions
         that are older than the transaction in trans_dict. 
@@ -216,7 +216,7 @@ class FreeTransactionManager:
             if trans.trans_no > self.user_max_trans[trans.user_id]:
                 self.user_max_trans[trans.user_id] = trans.trans_no
 
-    def get_trans_list(self):
+    def get_trans_list(self) -> List[Transaction]:
         """
         Returns a json representation of of the data in the transaction manager.
 
@@ -227,7 +227,7 @@ class FreeTransactionManager:
         """
         return [trans for user_id in self.user_curr_trans for trans in self.user_curr_trans[user_id]]
 
-    def to_json(self):
+    def to_json(self) -> dict:
         """
         Returns a json representation of of the data in the transaction manager.
 

@@ -6,7 +6,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-Implements the registry service in the blockchain
+Implements the registry service in the blockchain.
 """
 import zmq, pickle, argparse, setup_logger, logging
 from blockchain_proto.messages import log_info
