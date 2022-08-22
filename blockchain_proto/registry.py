@@ -8,11 +8,16 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Implements the registry service in the blockchain
 """
-import zmq, pickle, argparse
+import zmq, pickle, argparse, setup_logger, logging
+from blockchain_proto.messages import log_info
+from blockchain_proto.consts import node_id_global
 
 
 def run(registry_port=5001):
-    
+
+    node_id_global['value'] = 'Registry'    
+    log_info(logging, f"Starting proto-blockchain registry listening at {registry_port}.")
+
     context = zmq.Context()
 
     #  Socket for first connection 
@@ -25,11 +30,12 @@ def run(registry_port=5001):
     while True:
         # Socket to send messages out to other nodes
         message = registry_socket.recv_multipart()
-        print(message)
-        print(f'New peer connected at: {message[1]}')
+        log_info(logging, f"New peer connected at: {message[1]}.")
+        log_info(logging, f"Sending new peer registry info.")
         registry_socket.send_multipart([message[0], b'', 
                                         pickle.dumps(address_list), 
                                         pickle.dumps(notify_address_list)])
+
         if message[1] not in address_list:
             address_list.append(message[1])
 

@@ -8,6 +8,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Constants used in the project.
 """
+node_id_global = {'value': 'Node 1'}
 
 NULL_BLOCK_HASH = "NULL-BLOCK-HASH"
 TRANS_GOSSIP = b'transaction'

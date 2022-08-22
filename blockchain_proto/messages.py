@@ -8,6 +8,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Contains some error messages
 """
+from blockchain_proto.consts import node_id_global
+
+
 def unordered_trans_msg(user_id, bhash):
     return f"Transactions for {user_id} in block with " +\
            f"hash {bhash} are not in order."
@@ -31,3 +34,22 @@ def block_was_already_added_msg(bhash):
 def remove_non_existent_block_msg(bhash):
     return f"Tring to remove non-existent block with hash {bhash}."
 
+
+def log_debug(log_obj, msg):
+    log_obj.debug(f"[{node_id_global['value']}] " + msg)
+
+
+def log_info(log_obj, msg):
+    log_obj.info(f"[{node_id_global['value']}] " + msg)
+
+
+def log_warning(log_obj, msg):
+    log_obj.warn(f"[{node_id_global['value']}] " + msg)
+
+
+def log_error(log_obj, msg):
+    log_obj.error(f"[{node_id_global['value']}] " + msg)
+
+
+def log_critical(log_obj, msg):
+    log_obj.critical(f"[{node_id_global['value']}] " + msg)

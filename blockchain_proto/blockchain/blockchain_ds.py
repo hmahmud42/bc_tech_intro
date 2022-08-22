@@ -10,6 +10,7 @@ Implements a simple blockchain data structure.
 """
 from os import remove, times
 from typing import Union, List
+import logging
 
 from blockchain_proto.blockchain.block_simple import BlockSimple
 from blockchain_proto.transactions.transaction import Transaction
@@ -18,7 +19,9 @@ from blockchain_proto.forks.fork import Fork
 from blockchain_proto.forks.fork_manager import ForkManager
 from blockchain_proto.blockchain.block_helper import create_block, BlockMap
 from blockchain_proto.consts import *
-from blockchain_proto.messages import block_was_already_added_msg
+from blockchain_proto.messages import block_was_already_added_msg, \
+    log_info, log_debug, log_warning, log_error, log_critical
+
 
 
 class BlockChain(object):
@@ -64,7 +67,7 @@ class BlockChain(object):
         try:
             self.free_trans_manager.add_transaction(transaction)
         except ValueError as v: 
-            print(f"Error: {str(v)}")
+            log_error(logging, f"{str(v)}")
 
         if self.free_trans_manager.num_free() >= self.trans_per_block:
             # TODO: get the latest transactions for the users
@@ -89,7 +92,7 @@ class BlockChain(object):
         list(BlockSimple):
             All the blocks added
         """
-        print("Adding new blocks to the chain...")
+        log_info(logging, "Adding new blocks to the chain...")
         trans_to_remove = []
         fork = self.fork_manager.get_longest_fork()
         latest_block_hash = fork.head_block_hash if fork else NULL_BLOCK_HASH
@@ -107,12 +110,12 @@ class BlockChain(object):
         self.fork_manager.add_blocks(blocks_added)
         remove_failures = self.free_trans_manager.remove_older_and_equal_trans(trans_to_remove)
         if len(remove_failures) > 0:
-            print("Something went wrong when adding transactions.")
-            print("Failed to remove the following unadded transactions after they were added to a block.")
+            log_critical(logging, "Something went wrong when adding transactions.")
+            log_critical(logging, "Failed to remove the following unadded transactions after they were added to a block.")
             for t in remove_failures:
-                print(t)
+                log_critical(logging, str(t))
         self.cleanup()
-        print(f"Added: {len(blocks_added)} blocks.")
+        log_info(logging, f"Added: {len(blocks_added)} blocks.")
         return blocks_added
 
     def add_incoming_block(self, incoming_block: BlockSimple) -> Union[BlockSimple, str]:
@@ -140,7 +143,7 @@ class BlockChain(object):
 
         ret_val = self.fork_manager.add_blocks([incoming_block])
         if ret_val[0] != 1:
-            print(f"Error: {ret_val[0]}")
+            log_error(logging, f"Error: {ret_val[0]}")
             return ret_val[0]
         
         self.block_map.add(incoming_block)
