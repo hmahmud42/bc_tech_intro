@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>W3.CSS Template</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<!-- style taken from "https://www.w3schools.com/w3css/4/w3.css" -->
+<style>
+    
+    /* html,body{font-family:Verdana,sans-serif;font-size:15px;line-height:1.5}
+    h1{font-size:36px}h2{font-size:30px}h3{font-size:24px}h4{font-size:20px}h5{font-size:18px}h6{font-size:16px}
+    h1,h2,h3,h4,h5,h6{font-family:"Segoe UI",Arial,sans-serif;font-weight:400;margin:10px 0}.w3-wide{letter-spacing:4px} */
+
+    .column {
+      float: left;
+    width: 50%;
+    }
+
+    .data_form {display: table; border-collapse: separate;}
+    .data_section { display: table-row; }
+	.data_label {display: table-cell; text-align: right;}
+	.data_input {display: table-cell;}        
+
+</style>
+
+
+<body>
+
+    <h1>Proto Blockchain Interface</h1>
+    Node Port: <input type="text" id="server_address" value="http://127.0.0.1:5000/returnjson">
+
+    <hr>
+    <div class="row">
+        <div class="column" >
+
+            <h2>Add transactions</h2>
+                <div id="add", class="data_form">
+                
+                    <p class="data_section"> 
+                        <label style="display: table-cell;text-align: left; font-weight: bold;"> Transaction 1 </label> 
+                    </p>
+                    <p></p>
+
+                    <p class="data_section">
+                        <label class="data_label">User ID: </label> 
+                        <input class="data_input" type="text" id="trans_1_user_id" value="Enter user ID here">
+                    </p>
+                    <p></p>
+                    <p class="data_section">
+                        <label class="data_label">Transaction No: </label> 
+                        <input type="text" class="data_input" id="trans_1_trans_no" value="Enter transaction No. here">
+                    </p>
+                    <p></p>
+                    <p class="data_section">
+                        <label class="data_label">Transaction Details:  </label> 
+                        <input type="text"  class="data_input" class="data_input" id="trans_1_detail" value="Enter transaction details here">
+                    </p>
+                
+                </div>
+                <p></p>
+                <button 
+                    type="button"
+                    onclick="add_transaction()">
+                    Add Transaction
+                </button>
+                <button 
+                    type="button"
+                    onclick="add_transaction()">
+                    Reset
+                </button>
+
+                <p></p>
+                <button 
+                    type="button"
+                    onclick="document.getElementById('blockchain').value = httpGet(document.getElementById('server_address').value)">
+                    <b> Submit All</b>
+                </button>
+
+
+        </div>
+        <div class="column">
+            <button 
+                    type="button"
+                    onclick="document.getElementById('blockchain').value = httpGet(document.getElementById('server_address').value)">
+                Retreive Node Data
+            </button>
+        
+            <br>
+            <h3 style="text-align:center">Retreived Blockchain </h3> 
+            <textarea readonly id="blockchain" rows=10 style="width: 95%;"> </textarea>
+            <p></p>    
+            <h3 style="text-align:center">Un-Added Transactions</h3> 
+            <textarea readonly id="blockchain" rows=10 style="width: 95%;"> </textarea>
+
+
+        </div>
+      </div>
+
+
+
+</body>
+<script>
+    function httpGet(theUrl){
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+        xmlHttp.send( null );
+        return xmlHttp.responseText;
+    }
+
+    count = 2
+
+    function create_row_elem(){
+        let row_p = document.createElement("p");
+        row_p.classList.add("data_section");
+
+        let lbl = document.createElement("label");
+        lbl.classList.add("data_label");
+        row_p.appendChild(lbl);
+
+        let inp = document.createElement("input");
+        inp.classList.add("data_input");
+        inp.type = "text";
+        row_p.appendChild(inp)
+        
+        obj = {row_p, lbl, inp}
+
+        return obj
+
+    }
+
+    function add_transaction() {
+
+        div_elem = document.getElementById("add")
+
+        // Add the title
+        const trans_title_row = document.createElement("p");
+        trans_title_row.class = "data_section";
+        const trans_title_label = document.createElement("label");
+        trans_title_label.style = "display: table-cell;text-align: left; font-weight: bold;";
+        trans_title_label.appendChild(document.createTextNode("Transaction " + count));
+        trans_title_row.appendChild(trans_title_label);
+        div_elem.appendChild(trans_title_row);
+
+
+        // Add the User-ID row
+        let user_row = create_row_elem();
+        user_row.lbl.appendChild(document.createTextNode("User ID:"))
+        user_row.inp.value = "Enter user ID here";
+        user_row.inp.id = "trans_"+count+"_user_id";
+        div_elem.appendChild(user_row.row_p)
+
+
+        // Add the Transaction No. row
+        let trans_no_row = create_row_elem();
+        trans_no_row.lbl.appendChild(document.createTextNode("Transaction No: "))
+        trans_no_row.inp.value = "Enter transaction No. here";
+        trans_no_row.inp.id = "trans_"+count+"_trans_no";
+        div_elem.appendChild(trans_no_row.row_p)
+
+
+        // Add the Transaction Detail row
+        let trans_det_row = create_row_elem();
+        trans_det_row.lbl.appendChild(document.createTextNode("Transaction Details: "))
+        trans_det_row.inp.value = "Enter transaction details here";
+        trans_det_row.inp.id = "trans_"+count+"_trans_detail";
+        div_elem.appendChild(trans_det_row.row_p)
+
+
+        // const trans_user_id_row = document.createElement("p");
+        // trans_user_id_row.class = "data_section";
+
+        // const trans_user_id_label = document.createElement("label");
+        // trans_user_id_label.class = "data_label";
+        // trans_user_id_label.appendChild(document.createTextNode("User ID: "));
+        // trans_user_id_row.appendChild(trans_user_id_label);
+
+        // const trans_user_id_input = document.createElement("input");
+        // trans_user_id_input.class = "data_input";
+        // trans_user_id_input.type = "text";
+        // trans_user_id_input.id = "trans_"+count+"_user_id";
+        // trans_user_id_input.value="Enter user ID here";
+        // trans_user_id_row.appendChild(trans_user_id_input)
+        // div_elem.appendChild(trans_user_id_row)
+
+        // // Add the Transaction No. row
+        // const trans_user_id_row = document.createElement("p");
+        // trans_user_id_row.class = "data_section";
+
+        // const trans_user_id_label = document.createElement("label");
+        // trans_user_id_label.class = "data_label";
+        // trans_user_id_label.appendChild(document.createTextNode("User ID: "));
+        // trans_user_id_row.appendChild(trans_user_id_label);
+
+        // const trans_user_id_input = document.createElement("input");
+        // trans_user_id_input.class = "data_input";
+        // trans_user_id_input.type = "text";
+        // trans_user_id_input.id = "trans_"+count+"_user_id";
+        // trans_user_id_input.value="Enter user ID here";
+        // trans_user_id_row.appendChild(trans_user_id_input)
+        // div_elem.appendChild(trans_user_id_row)
+
+        // Add the Transaction Details. row
+
+        count = count + 1
+    }
+
+
+
+</script>
+
+
+</html>
