@@ -45,7 +45,7 @@ class BlockHeader(object):
             BLOCK_HASH: self.block_hash,
             TRANS_HASH: self.transactions_hash,
             PREV_BLOCK_HASH: self.prev_block_hash,
-            TIMESTAMP: self.timestamp,
+            TIMESTAMP: str(self.timestamp),
             DIFF: self.difficulty,
             NONCE: self.nonce
         }

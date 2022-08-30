@@ -20,7 +20,7 @@ def test_transaction():
     try:
         tr1 = Transaction(user_id="User 1",
                           trans_no=23,
-                          trans_str="P" * 70)
+                          trans_details="P" * 70)
     except AssertionError as e:
         pass
     else:
@@ -29,25 +29,25 @@ def test_transaction():
     # test validation
     tr1 = Transaction(user_id="User 1",
                       trans_no=23,
-                      trans_str="P")
-    tr1.trans_str = "P" * 70
+                      trans_details="P")
+    tr1.trans_details = "P" * 70
     assert not tr1.validate()
-    tr1.trans_str = "Pay Bob 23 Gold coins"
+    tr1.trans_details = "Pay Bob 23 Gold coins"
 
     # test ordering
     tr2 = Transaction(user_id="User 1",
                       trans_no=24,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     assert tr2.validate()
 
     tr3 = Transaction(user_id="User 1",
                       trans_no=23,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     assert tr1 == tr3
 
     tr4 = Transaction(user_id="User 2",
                       trans_no=1,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
 
     assert tr1 < tr2 and tr3 < tr2
     assert tr1 < tr4 and not tr1 == tr4
@@ -82,10 +82,10 @@ def test_transaction_manager_add():
     # test basic addition
     tr1 = Transaction(user_id="User 1",
                       trans_no=23,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     tr2 = Transaction(user_id="User 1",
                       trans_no=22,
-                      trans_str="Pay Bob 22 Gold coins")
+                      trans_details="Pay Bob 22 Gold coins")
 
     free_trans_manager.add_transaction(tr1)
     free_trans_manager.add_transaction(tr2)
@@ -93,7 +93,7 @@ def test_transaction_manager_add():
     # test double addition
     tr1_dup = Transaction(user_id="User 1",
                           trans_no=23,
-                          trans_str="Pay Bob 23 Gold coins")
+                          trans_details="Pay Bob 23 Gold coins")
 
     try:
         free_trans_manager.add_transaction(tr1_dup)
@@ -115,7 +115,7 @@ def test_transaction_manager_get_valid():
         user_trans.append([
             Transaction(user_id=f"User {user}",
                         trans_no=trans_no,
-                        trans_str=f"Pay Bob {trans_no} Gold coins")
+                        trans_details=f"Pay Bob {trans_no} Gold coins")
             for trans_no in range(base_trans_nos[user],
                                   base_trans_nos[user] + num_trans[user])
         ])
@@ -123,7 +123,7 @@ def test_transaction_manager_get_valid():
         user_trans[user].extend(
             Transaction(user_id=f"User {user}",
                         trans_no=trans_no,
-                        trans_str=f"Pay Bob {trans_no} Gold coins")
+                        trans_details=f"Pay Bob {trans_no} Gold coins")
             for trans_no in range(base_trans_nos[user] - 3,
                                   base_trans_nos[user])
 
@@ -132,7 +132,7 @@ def test_transaction_manager_get_valid():
         user_trans[user].extend(
             Transaction(user_id=f"User {user}",
                         trans_no=trans_no,
-                        trans_str=f"Pay Bob {trans_no} Gold coins")
+                        trans_details=f"Pay Bob {trans_no} Gold coins")
             for trans_no in range(base_trans_nos[user] + num_trans[user] + 1,
                                   base_trans_nos[user] + num_trans[user] + 10,
                                   2)

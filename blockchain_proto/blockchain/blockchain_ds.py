@@ -68,6 +68,7 @@ class BlockChain(object):
             self.free_trans_manager.add_transaction(transaction)
         except ValueError as v: 
             log_error(logging, f"{str(v)}")
+            return str(v)
 
         if self.free_trans_manager.num_free() >= self.trans_per_block:
             # TODO: get the latest transactions for the users

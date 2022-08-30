@@ -9,7 +9,14 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Implements a node in the blockchain.
 """
 from typing import List, Tuple
-import pickle, threading, zmq, argparse, random, time, logging
+import logging
+import pickle
+import argparse
+import random
+import threading
+import json 
+
+import zmq
 import numpy as np
 from datetime import datetime
 from dateutil.parser import parse
@@ -20,7 +27,8 @@ from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
         GET_BLOCKCHAIN, GET_UNADDED_TRANS, ADD_TRANS, NEW_PEER, BLOCKS_AND_TRANS, \
         node_id_global
 from blockchain_proto.blockchain.blockchain_ds import BlockChain
-# from blockchain_proto.local_web_server import run_webserver
+from blockchain_proto.local_web_server import LIWebServer
+from blockchain_proto.node_test import test_local
 from blockchain_proto.blockchain.puzzle import sha_256_hash_string
 from blockchain_proto.transactions.transaction import Transaction
 
@@ -28,13 +36,22 @@ from blockchain_proto.transactions.transaction import Transaction
 class Node:
     """
     Class representing a peer in a blockchain.
+
+    Parameters
+    ----------
+
+    args: argparse.Namespace
+        Arguments received from the command line parsed.
+
+    context: zmq.Context
+        The shared zmq Context object with which to create the sockets.
     """
     def __init__(self, args, context):
         node_id_global['value'] = f"Node {args.node_id}"
         self.id = args.id
         self.context = context
-        self.gossip_out_port = args.port
-        self.new_peer_notify_port = args.port_new_peer
+        self.gossip_out_port = args.base_port
+        self.new_peer_notify_port = str(int(args.base_port) + 1)
         self.registry_address = args.registry_address
         
         self.gossip_out_socket = context.socket(zmq.PUB)
@@ -165,29 +182,57 @@ class Node:
             The second element gives the type of information requested.
         """
         if request[1] == GET_BLOCKCHAIN:
-            bc_json = self.blockchain.to_json()
+            bc_json_str = json.dumps(self.blockchain.to_json(), indent=4)
             self.local_interface_socket.send_multipart(
-                [request[0], b'', pickle.dumps(bc_json)]
+                [request[0], b'', pickle.dumps(bc_json_str)]
             )
 
         elif request[1] == GET_UNADDED_TRANS:
-            trans = self.blockchain.get_trans_not_added_json()
+            trans = json.dumps(self.blockchain.get_trans_not_added_json())
             log_info(logging, f"Returning Un-added transactions {trans}.")
             self.local_interface_socket.send_multipart(
                 [request[0], b'', pickle.dumps(trans)]
             )
 
         elif request[1] == ADD_TRANS:
-            trans = pickle.loads(request[2])
-            log_info(logging, f"Adding transaction... {str(trans)}")
-            self.blockchain.add_transaction(trans)
-            self.local_interface_socket.send_multipart(
-                [request[0], b'', request[2]]
-            )
+            trans_list = pickle.loads(request[2])
+            self._add_li_transactions(request[0], trans_list)
+
         else:
             log_warning(logging, f"Unknown request {request[1]} via the local interface.")
-        
 
+    def _add_li_transactions(self, zmq_sock_address: bytes, trans_list: List[Transaction]):
+        """
+        Add transactions received via the local interface request and sends
+        the response back to the client.
+
+        Parameters
+        ----------
+
+        zmq_sock_address: bytes
+            The address of the zmq socket to send the responses back to.
+
+        trans_list: list of transactions
+            The list of transactions to be added.
+        """
+        response_list = []
+        for trans in trans_list:
+            log_info(logging, f"Adding transaction... {str(trans)}")
+            blocks_created = self.blockchain.add_transaction(trans)
+            if isinstance(blocks_created, list):
+                resp_str = f"Added transaction User ID: {trans.user_id}, Trans No: {trans.trans_no}" 
+                if len(blocks_created) > 0: resp_str = resp_str + f" and created {len(blocks_created)} block(s)."
+                else: resp_str = resp_str + "."
+            else:
+                resp_str = blocks_created
+            response_list.append(resp_str)
+
+        response_str = "\n".join(response_list)
+
+        self.local_interface_socket.send_multipart(
+            [zmq_sock_address, b'', pickle.dumps(response_str)]
+        )
+        
     def add_blocks_trans(self, request: List[bytes]):
         """
         Adds blocks and transactions received from a new peer that has just connected.
@@ -217,7 +262,7 @@ class Node:
         self.peer_notify_address_list.append(new_peer_info[3].decode())
 
         self.gossip_in_socket.connect(self.peer_address_list[-1])
-        send_blocks_trans_socket = self.context.socket(zmq.DEALER   )
+        send_blocks_trans_socket = self.context.socket(zmq.DEALER)
         send_blocks_trans_socket.connect(self.peer_notify_address_list[-1])
         data = pickle.dumps( [self.blockchain.get_block_list(), self.blockchain.get_trans_not_added()])
         send_blocks_trans_socket.send_multipart([BLOCKS_AND_TRANS, data])
@@ -269,12 +314,9 @@ def parseargs():
     Parse the arguments.
     """
     parser = argparse.ArgumentParser(description='Runs a Proto-blockchain node.')
-    parser.add_argument('--port',
+    parser.add_argument('--base-port',
                         help="Port where the node will listen for incoming"+
                             "messages from peers.",
-                        required=True)
-    parser.add_argument('--port-new-peer',
-                        help="Port where the node will listen for new peers",
                         required=True)
     parser.add_argument('--registry-address',
                         help='Address of where the registry service is running.' +
@@ -286,73 +328,34 @@ def parseargs():
     parser.add_argument('--difficulty',
                         help='Difficulty level for the puzzles in the blockchain.',
                         default=2, type=int, required=False)
-    parser.add_argument('--user-id',
-                        help='User id for test.',
-                        default=1, type=int, required=False)
     parser.add_argument('--node-id',
                         help="ID of node - used only for displaying messages.",
                         default=1,                            
                         required=False)
-
+    parser.add_argument('--run-test',
+                        help="Flag - if set, then runs a simple test to add 10 random trasactions with the user id given.",
+                        action='store_true', required=False)
+    parser.add_argument('--user-id',
+                        help='User id for test.',
+                        default=1, type=int, required=False)
 
     return parser.parse_args()
 
 
 
-def create_transactions_2(user_nums, base_trans, trans_per_user):
-    """
-    Create the transactions according to the given parameters.
-
-    Parameters
-    ----------
-
-    user_nums: list of int
-        The id-number of the users in the transaction
-
-    base_trans: list of int
-        The starting point of the different transactions.
-
-    trans_per_user: list of int
-        The number of transactions per user.
-    """
-    tr_list = []
-    other_users = ['Bikash', 'Jamila', 'Asha', 'Xinping']
-    for i, num in enumerate(user_nums):
-        for t in range(trans_per_user[i]):
-            coins = np.random.randint(low=22, high=44)
-            user = np.random.choice(other_users)
-            tr = Transaction(user_id=f"User {num}",
-                        trans_no=base_trans[i] + t,
-                        trans_str=f"Pay {user} {coins} Gold coins")
-            tr_list.append(tr)
-
-    return tr_list
-
-
-def test_local(context, user_id):
-    local_interface_socket = context.socket(zmq.DEALER)
-    local_interface_socket.connect(f"inproc://local_interface")
-    trans = create_transactions_2([user_id], [0], [10])
-    for tran in trans:
-        local_interface_socket.send_multipart([
-            ADD_TRANS, pickle.dumps(tran)])
-        local_interface_socket.recv_multipart()
-    
-    local_interface_socket.send_multipart([GET_UNADDED_TRANS])
-    unadded_trans = local_interface_socket.recv_multipart()
-    
-    log_debug(logging, f"Transactions not yet added: {pickle.loads(unadded_trans[1])}")
-
-
 def run():
+    """
+    Run the node.
+    """
     args = parseargs()
     context = zmq.Context()
     setattr(args, "id", sha_256_hash_string(str(datetime.now) + str(random.randint(0, 10000))))
-    node = Node(context=context, args=args)
+    node = Node(args=args,context=context)
+    li_ws = LIWebServer(args=args, context=context)
     threading.Thread(target=lambda: node.run()).start()
-    # threading.Thread(target=lambda: run_webserver(args.web_interface_port, 
-    #                                               context)).start()
-    threading.Thread(target=lambda: test_local(context, args.user_id)).start()
+    threading.Thread(target=lambda: li_ws.run_li_ws()).start()
+    if args.run_test:
+        threading.Thread(target=lambda: test_local(args.user_id, context)).start()
 
 
 if __name__ == "__main__":

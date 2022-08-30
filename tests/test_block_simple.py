@@ -29,17 +29,17 @@ def create_block_header():
 def create_transactions():
     tr1 = Transaction(user_id="User 1",
                       trans_no=23,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     # test ordering
     tr2 = Transaction(user_id="User 1",
                       trans_no=24,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     tr3 = Transaction(user_id="User 1",
                       trans_no=23,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     tr4 = Transaction(user_id="User 2",
                       trans_no=1,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
 
     return tr1, tr2, tr3, tr4
 

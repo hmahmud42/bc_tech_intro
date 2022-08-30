@@ -62,7 +62,7 @@ class Fork:
         return {        
            FORK_ID: self.fork_id,
            BLOCK_HASH: self.head_block_hash,
-           TIMESTAMP: self.timestamp,
+           TIMESTAMP: str(self.timestamp),
            NUM_BLOCKS: self.num_blocks,
            FORK_START_BLOCK_HASH: self.fork_start_block_hash
         }        

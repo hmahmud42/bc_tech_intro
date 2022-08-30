@@ -237,9 +237,11 @@ class ForkManager:
         dict:
             Json version of this fork manager useful for a human user.
         """
+        if len(self.forks) == 0:
+            return {"forks": "No forks have been created yet"}
         return {
             LONGEST_FORK_ID: self.longest_fork.fork_id,
-            FORKS: {fork_id: fork.to_json for fork, fork_id in self.forks.items()}
+            FORKS: {fork_id: fork.to_json() for fork_id, fork in self.forks.items()}
         }
 
 

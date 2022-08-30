@@ -19,6 +19,11 @@ ADD_TRANS = b'add_trans'
 NEW_PEER = b'new_peer'
 BLOCKS_AND_TRANS = b'blocks_trans'
 
+GET_BLOCKCHAIN_ROUTE = '/get_blockchain'
+GET_UNADDED_TRANS_ROUTE = '/get_unadded_trans'
+ADD_TRANS_ROUTE = '/add_trans'
+
+
 USER_ID = 'user_id'
 TRANS_NO = 'trans_no'
 TRANS_STR = 'trans_str'

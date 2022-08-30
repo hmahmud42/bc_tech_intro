@@ -16,17 +16,17 @@ from blockchain_proto.blockchain.block_helper import create_block
 def create_transactions(base_trans):
     tr1 = Transaction(user_id="User 1",
                       trans_no=base_trans[0],
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     # test ordering
     tr2 = Transaction(user_id="User 1",
                       trans_no=base_trans[0]+1,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     tr3 = Transaction(user_id="User 1",
                       trans_no=base_trans[0]+2,
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
     tr4 = Transaction(user_id="User 2",
                       trans_no=base_trans[1],
-                      trans_str="Pay Bob 23 Gold coins")
+                      trans_details="Pay Bob 23 Gold coins")
 
     return tr1, tr2, tr3, tr4
 
@@ -56,7 +56,7 @@ def create_transactions_2(user_nums, base_trans, trans_per_user):
             user = np.random.choice(other_users)
             tr = Transaction(user_id=f"User {num}",
                         trans_no=base_trans[i] + t,
-                        trans_str=f"Pay {user} {coins} Gold coins")
+                        trans_details=f"Pay {user} {coins} Gold coins")
             tr_list.append(tr)
 
     return tr_list
