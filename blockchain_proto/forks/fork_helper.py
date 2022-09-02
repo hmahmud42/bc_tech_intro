@@ -13,8 +13,9 @@ from typing import List
 from blockchain_proto.blockchain.block_simple import BlockSimple
 from blockchain_proto.blockchain.block_helper import validate_block_hashes
 from blockchain_proto.consts import NULL_BLOCK_HASH
-from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
-    earliest_trans_mismatch_msg, block_was_already_added_msg, remove_non_existent_block_msg
+from blockchain_proto.exceptions import UnorderedTransactionError, PrecBlockNotFoundError, \
+    EarliestTransMismatchError, BlockWasAlreadyAddedError, RemoveNonExistentBlockError
+
 
 
 class BlockDepthManager:
@@ -157,10 +158,10 @@ class ForkValidator:
         """
         prev_hash = inc_block.prev_hash() 
         if prev_hash != NULL_BLOCK_HASH and prev_hash not in self.latest_trans:
-            raise ValueError(prec_block_not_found_msg(inc_block.hash(), prev_hash))
+            raise PrecBlockNotFoundError(inc_block.hash(), prev_hash)
 
         if inc_block.hash() in self.latest_trans:
-            raise ValueError(block_was_already_added_msg(inc_block.hash()))
+            raise BlockWasAlreadyAddedError(inc_block.hash())
 
         self.validate_transactions(inc_block)
         validate_block_hashes(inc_block)
@@ -195,7 +196,7 @@ class ForkValidator:
         for user_id in user_trans:
             tns = user_trans[user_id]
             if not all([tns[i] + 1 == tns[i + 1] for i in range(len(tns) - 1)]):
-                raise ValueError(unordered_trans_msg(user_id, block.hash()))#
+                raise UnorderedTransactionError(user_id, block.hash())
 
     def validate_user_latest_trans(self, user_trans: dict, start_block: BlockSimple):
         """
@@ -224,8 +225,8 @@ class ForkValidator:
                 # for item in self.latest_trans.prev_hashes.items():
                 #     print(item)
 
-                raise ValueError(earliest_trans_mismatch_msg(
-                    user_id, start_block.hash(), user_trans[user_id][0], latest_trans))
+                raise EarliestTransMismatchError(
+                    user_id, start_block.hash(), user_trans[user_id][0], latest_trans)
 
 
     def add_block(self, block):
@@ -255,7 +256,7 @@ class ForkValidator:
         try:
             self.latest_trans.remove_block(bhash)
         except KeyError as k:
-            raise KeyError(remove_non_existent_block_msg(bhash))
+            raise RemoveNonExistentBlockError(bhash)
 
     def get_latest_trans(self, user_id:str, start_block_hash:str) -> int:
         """
@@ -276,3 +277,4 @@ class ForkValidator:
             -1 otherwise.
         """    
         return self.latest_trans.get_latest_trans(user_id, start_block_hash)
+    

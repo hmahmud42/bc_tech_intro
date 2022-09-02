@@ -16,7 +16,7 @@ import pickle
 import numpy as np
 from blockchain_proto.transactions.transaction import Transaction
 from blockchain_proto.consts import ADD_TRANS, GET_UNADDED_TRANS
-from blockchain_proto.messages import log_debug
+from blockchain_proto.log_messages import log_debug
 
 
 def create_transactions_for_test(user_nums, base_trans, trans_per_user):

@@ -9,6 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Code for managing forks in the chain.
 """
 from typing import List
+from blockchain_proto.exceptions import BlockWasAlreadyAddedError, PrecBlockNotFoundError
 from blockchain_proto.forks.fork_helper import BlockDepthManager, ForkValidator
 from blockchain_proto.forks.fork import Fork
 from blockchain_proto.blockchain.block_simple import BlockSimple
@@ -163,9 +164,13 @@ class ForkManager:
         for block in blocks_added:
             try:
                 self.validator.validate_incoming_block(block)
-            except ValueError as v:
+            except PrecBlockNotFoundError as v:
                 add_status.append(str(v))
                 continue
+            except BlockWasAlreadyAddedError as v:
+                add_status.append(str(v))
+                continue
+
             self.block_depth_manager.add_block(block)
             fork = self._find_insert_fork(block)
             if fork is None: fork = self._add_new_fork(block)

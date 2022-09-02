@@ -19,8 +19,8 @@ from blockchain_proto.forks.fork import Fork
 from blockchain_proto.forks.fork_manager import ForkManager
 from blockchain_proto.blockchain.block_helper import create_block, BlockMap
 from blockchain_proto.consts import *
-from blockchain_proto.messages import block_was_already_added_msg, \
-    log_info, log_debug, log_warning, log_error, log_critical
+from blockchain_proto.exceptions import BlockWasAlreadyAddedError, TransWasAlreadyAddedError
+from blockchain_proto.log_messages import log_info, log_debug, log_warning, log_error, log_critical
 
 
 
@@ -64,11 +64,7 @@ class BlockChain(object):
         BlockSimple | str | None:
             As described in the function description.
         """
-        try:
-            self.free_trans_manager.add_transaction(transaction)
-        except ValueError as v: 
-            log_error(logging, f"{str(v)}")
-            return str(v)
+        self.free_trans_manager.add_transaction(transaction)
 
         if self.free_trans_manager.num_free() >= self.trans_per_block:
             # TODO: get the latest transactions for the users
@@ -140,7 +136,7 @@ class BlockChain(object):
             As described in the function description.
         """
         if incoming_block.hash() in self.block_map:
-            raise ValueError(block_was_already_added_msg(incoming_block.block_header.block_hash))
+            raise BlockWasAlreadyAddedError(incoming_block.block_header.block_hash)
 
         ret_val = self.fork_manager.add_blocks([incoming_block])
         if ret_val[0] != 1:
@@ -164,11 +160,10 @@ class BlockChain(object):
             for trans in block.transactions:
                 try:
                     self.free_trans_manager.add_transaction(trans)
-                except ValueError as v:
-                    if str(v).startswith("Transaction User"):
-                        continue
-                    else:
-                        raise v
+                except TransWasAlreadyAddedError as e:
+                    pass 
+                except Exception as e:
+                    log_error(logging, str(e))
 
             self.block_map.remove(bhash)
         
@@ -182,11 +177,11 @@ class BlockChain(object):
             json representation of the the block chain.
         """
         return {
+            FORK_DATA: self.fork_manager.to_json(),
+            TRANS_DATA: self.free_trans_manager.to_json(),
             TRANS_PER_BLOCK: self.trans_per_block,
             DIFFICULTY: self.difficulty,
-            BLOCK_MAP: self.block_map.to_json(),
-            TRANS_DATA: self.free_trans_manager.to_json(),
-            FORK_DATA: self.fork_manager.to_json()
+            BLOCK_MAP: self.block_map.to_json()
         }
 
     def get_blocks_newer(self, timestamp) -> List[BlockSimple]:

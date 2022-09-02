@@ -18,7 +18,7 @@ import zmq
 from blockchain_proto.consts import GET_UNADDED_TRANS, GET_BLOCKCHAIN, ADD_TRANS, \
     GET_BLOCKCHAIN_ROUTE, GET_UNADDED_TRANS_ROUTE, ADD_TRANS_ROUTE
 from blockchain_proto.transactions.transaction import Transaction
-from blockchain_proto.messages import log_info
+from blockchain_proto.log_messages import log_info
 
 
 log = logging.getLogger('werkzeug')

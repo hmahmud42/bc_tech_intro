@@ -15,7 +15,7 @@ from collections import defaultdict
 from blockchain_proto.transactions.transaction import Transaction
 from blockchain_proto.forks.fork_manager import ForkManager
 from blockchain_proto.consts import TRANS_NOT_YET_ADDED
-
+from blockchain_proto.exceptions import TransWasAlreadyAddedError
 
 class FreeTransactionManager:
     """
@@ -60,7 +60,7 @@ class FreeTransactionManager:
             The transaction to add.
         """
         if self.trans_was_added(trans):
-            raise ValueError(f"Transaction User: {trans.user_id}, no. : {trans.trans_no} was already added.")
+            raise TransWasAlreadyAddedError(trans.user_id, trans.trans_no)
 
         self.user_curr_trans[trans.user_id].append(trans)
         self.user_curr_trans_no[trans.user_id].append(trans.trans_no)

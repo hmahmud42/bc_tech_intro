@@ -20,9 +20,11 @@ import zmq
 import numpy as np
 from datetime import datetime
 from dateutil.parser import parse
+from blockchain_proto.blockchain.block_simple import BlockSimple
+from blockchain_proto.exceptions import BlockWasAlreadyAddedError, TransWasAlreadyAddedError
 
 import blockchain_proto.setup_logger
-from blockchain_proto.messages import log_debug, log_info, log_error, log_warning
+from blockchain_proto.log_messages import log_debug, log_info, log_error, log_warning
 from blockchain_proto.consts import TRANS_GOSSIP, BLOCK_GOSSIP, \
         GET_BLOCKCHAIN, GET_UNADDED_TRANS, ADD_TRANS, NEW_PEER, BLOCKS_AND_TRANS, \
         node_id_global
@@ -60,7 +62,8 @@ class Node:
         self.registry_socket = context.socket(zmq.DEALER)
         self.local_interface_socket = context.socket(zmq.ROUTER)
 
-        self.gossip_in_socket.setsockopt_string(zmq.SUBSCRIBE, 'DATA') 
+        self.gossip_in_socket.setsockopt_string(zmq.SUBSCRIBE, TRANS_GOSSIP.decode()) 
+        self.gossip_in_socket.setsockopt_string(zmq.SUBSCRIBE, BLOCK_GOSSIP.decode()) 
 
         self.gossip_out_address = f"tcp://*:{self.gossip_out_port}".encode()
         self.gossip_out_public_address = f"tcp://localhost:{self.gossip_out_port}".encode()
@@ -159,11 +162,18 @@ class Node:
                 trans = pickle.loads(data[1])
                 log_info(logging, f"Adding transaction... {str(trans)}")
                 self.blockchain.add_transaction(trans)
-            elif data[1] == BLOCK_GOSSIP: 
+            elif data[0] == BLOCK_GOSSIP: 
                     self.blockchain.add_incoming_block(pickle.loads(data[1]))
             else:
                 log_error(logging, f"Unknown gossip message type {data[0]}")
+        except BlockWasAlreadyAddedError as e:
+            # Will happen in a normal course of operation
+            pass
+        except TransWasAlreadyAddedError as e:
+            # Will happen in a normal course of operation
+            pass 
         except Exception as e:
+            # unexpected Exception
             log_error(logging, "When trying to handle gossiped-in message encountered: {e}")
 
     def handle_local_interface_request(self, request: List[bytes]):
@@ -188,7 +198,7 @@ class Node:
             )
 
         elif request[1] == GET_UNADDED_TRANS:
-            trans = json.dumps(self.blockchain.get_trans_not_added_json())
+            trans = json.dumps(self.blockchain.get_trans_not_added_json(), indent=4)
             log_info(logging, f"Returning Un-added transactions {trans}.")
             self.local_interface_socket.send_multipart(
                 [request[0], b'', pickle.dumps(trans)]
@@ -216,13 +226,19 @@ class Node:
             The list of transactions to be added.
         """
         response_list = []
+        new_blocks = []
         for trans in trans_list:
             log_info(logging, f"Adding transaction... {str(trans)}")
-            blocks_created = self.blockchain.add_transaction(trans)
+            try: 
+                blocks_created = self.blockchain.add_transaction(trans)
+            except TransWasAlreadyAddedError as e:
+                blocks_created = str(e)
+
             if isinstance(blocks_created, list):
                 resp_str = f"Added transaction User ID: {trans.user_id}, Trans No: {trans.trans_no}" 
                 if len(blocks_created) > 0: resp_str = resp_str + f" and created {len(blocks_created)} block(s)."
                 else: resp_str = resp_str + "."
+                new_blocks.extend(blocks_created)
             else:
                 resp_str = blocks_created
             response_list.append(resp_str)
@@ -232,6 +248,29 @@ class Node:
         self.local_interface_socket.send_multipart(
             [zmq_sock_address, b'', pickle.dumps(response_str)]
         )
+
+        self._gossip_blocks_and_trans(new_blocks, trans_list)
+
+    def _gossip_blocks_and_trans(self, blocks_list: List[BlockSimple], trans_list: List[Transaction]):
+        """
+        Gossips a list of blocks and transactions to peers.
+
+        Parameters
+        ----------
+
+        blocks_list: list of SimpleBlocks
+            The blocks to be gossiped to the peers.
+
+        trans_list: list of Transaction
+            The transactions to be gossiped to the peers.
+        """
+        print("gossiping")
+        for block in blocks_list:
+            self.gossip_out_socket.send_multipart([BLOCK_GOSSIP, pickle.dumps(block)])
+
+        for trans in trans_list:
+            self.gossip_out_socket.send_multipart([TRANS_GOSSIP, pickle.dumps(trans)])
+
         
     def add_blocks_trans(self, request: List[bytes]):
         """
@@ -243,10 +282,20 @@ class Node:
         blocks_trans = pickle.loads(request[2])
         log_info(logging, f"Adding {len(blocks_trans[0])} blocks from peer.")
         for block in blocks_trans[0]:
-            self.blockchain.add_incoming_block(block)
+            try:
+                self.blockchain.add_incoming_block(block)
+            except BlockWasAlreadyAddedError as v:
+                # This can happen naturally - so ignore
+                pass 
+
         log_info(logging, f"Adding {len(blocks_trans[1])} transactions from peer.")
         for trans in blocks_trans[1]:
-            self.blockchain.add_transaction(trans)
+            try:
+                self.blockchain.add_transaction(trans)
+            except TransWasAlreadyAddedError as v:
+                # This can happen naturally - so ignore
+                pass 
+            
 
     def handle_new_peer(self, new_peer_info: List[bytes]):
         """
@@ -295,7 +344,7 @@ class Node:
                 self.handle_gossip_in(data)
 
             if self.local_interface_socket in socks:
-                log_info(logging, "Local interface request recevied")
+                log_info(logging, "Local interface request received")
                 request = self.local_interface_socket.recv_multipart()
                 self.handle_local_interface_request(request)
 

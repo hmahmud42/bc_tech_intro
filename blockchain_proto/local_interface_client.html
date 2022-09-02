@@ -72,8 +72,8 @@
                 <p></p>
                 <button 
                     type="button"
-                    onclick="add_transaction()">
-                    Add Transaction
+                    onclick="new_transaction_row()">
+                    New Transaction Row
                 </button>
                 <button 
                     type="button"
@@ -144,7 +144,7 @@
 
     }
 
-    function add_transaction() {
+    function new_transaction_row() {
         
         count = count + 1
 
@@ -184,7 +184,7 @@
     function reset(){
         remove_all_children("add")
         count = 0
-        add_transaction()
+        new_transaction_row()
     }
 
     err_count = 0

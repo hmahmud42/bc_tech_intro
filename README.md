@@ -35,6 +35,7 @@ The rest of the documentation is divided into the following parts:
 
 - [**Final Words**](./docs/bc_proto_final_words.md) Some final thoughts on the articles and where to go from here. 
 
+- [**A Proto-Blockchain Implementation**](./docs/bc_proto_implementation.md) Shows how to use the proto-blockchain implemented in this repo and hints on its implementation.
 
 All of the above are supported up by pseduocode implementation, and references to python implementation in this repo. 
 

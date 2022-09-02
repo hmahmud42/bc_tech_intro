@@ -9,7 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 Implements the registry service in the blockchain.
 """
 import zmq, pickle, argparse, setup_logger, logging
-from blockchain_proto.messages import log_info
+from blockchain_proto.log_messages import log_info
 from blockchain_proto.consts import node_id_global
 
 
