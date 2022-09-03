@@ -14,7 +14,7 @@ import pickle
 import argparse
 import random
 import threading
-import json 
+import json
 
 import zmq
 import numpy as np

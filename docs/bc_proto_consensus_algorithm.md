@@ -159,7 +159,7 @@ So what may happen is nodes within a cluster, say cluster `A`,  may create enoug
 </p>
 <p align = "center"><b> Figure: Forking Example.</b> </p>
 
-A blockchain may also be forked intentionally to, for instance, upgrading to a different version of the software etc. This is a vast topic in and of itself - the [wikipedia article](https://en.wikipedia.org/wiki/Fork_(blockchain)) is a potential starting point for further research.
+A blockchain may also be forked intentionally to, for instance, upgrading to a different version of the software etc. This is a vast topic in and of itself - the [Wikipedia article](https://en.wikipedia.org/wiki/Fork_(blockchain)) is a potential starting point for further research.
 
 
 ### Strategies for dealing with forking
@@ -184,7 +184,7 @@ Recall from the data structures article that the blockchain data structure ensur
 
 To begin with, because of the reward mechanism, all the nodes have the incentive to add blocks to the transactions as soon as possible. This ensures that the blockchain is always kept up to date. The main outstanding issue now is how consistency is ensured. We have already considered how this is done when honest nodes disagree on the order of the transactions in the section on forking. So we need to consider what happens when some node wants to tamper with one or more transactions and then wants the rest of the nodes in the blockchain to accept that tampering as the truth.
 
-In this case, as discussed in [here](bc_proto_blockchain_ds.md#tampering-is-detectable-or-expensive), the tamperer will need to spend a lot of effort to recreate the blocks from the tampered block onward for the tampering to be undetectable. Now the next task for this tamperer will be to have the new blocks be accepted by the other peers. In particular, the tampered blockchain will represent a fork from the tampered blocks onwards. Because of the rule for resolving forks discussed above, the tampering node will need to ensure that its chain also has the highest weight. Which means it will need to keep adding new transactions as new blocks itself, because the other nodes in the blockchain, will have kept adding those same transactions as new blocks to the untampered chain because of the reward incentive.  So this means, roughly speaking that the tamperer would need to have more resources available to it than the honest nodes in the chain to overwhelm the chain and have its tampering be accepted as the truth. This is very challenging if not impossible in a sufficiently large blockchain system. 
+In this case, as discussed in [here](bc_proto_blockchain_ds.md#tampering-is-detectable-or-expensive), the tamperer will need to spend a lot of effort to recreate the blocks from the tampered block onward for the tampering to be undetectable. Now the next task for this tamperer will be to have the new blocks be accepted by the other peers. In particular, the tampered blockchain will represent a fork from the tampered blocks onward. Because of the rule for resolving forks discussed above, the tampering node will need to ensure that its chain also has the highest weight. Which means it will need to keep adding new transactions as new blocks itself, because the other nodes in the blockchain, will have kept adding those same transactions as new blocks to the untampered chain because of the reward incentive.  So this means, roughly speaking that the tamperer would need to have more resources available to it than the honest nodes in the chain to overwhelm the chain and have its tampering be accepted as the truth. This is very challenging if not impossible in a sufficiently large blockchain system. 
 
 The above description is somewhat informal but I hope it gives the reader some intuition about why the consensus algorithm works. Proper formal analysis is challenging, and I recommend the reader consult the research literature on blockchain consensus algorithms for details. Some possible starting points for this are [4, 5].
 
@@ -204,3 +204,9 @@ This concludes our presentation of the consensus algorithm. As the reader may su
 [4] Ferdous, Md Sadek and Chowdhury, Mohammad Jabed Morshed and Hoque, Mohammad A. and Colman, Alan. Blockchain Consensus Algorithms: A Survey. arXiv:2001.07091. https://arxiv.org/abs/2001.07091
 
 [5] Garay, Juan A. and Kiayias, Aggelos and Leonardos, Nikos: Full Analysis of Nakamoto Consensus in Bounded-Delay Networks. IACR Cryptol. ePrint Arch. 2020.
+
+
+<br>
+<hr>
+
+[Next Article: A Proto-Blockchain Implementation](./docs/bc_proto_implementation.md)

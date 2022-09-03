@@ -5,7 +5,7 @@ Copyright 2022 M. M. Hassan Mahmud
 
 Recall from the [Introduction](./bc_proto_quick_intro.md) that the term blockchain can refer to at least four different concepts, one of them being the core data structure that is used to implement distributed ledgers. In this article we look at this data structure.
 
-As mentioned before, in a P2P distributed ledger each node has its own copy of the data that it can modify at will. So there needs to be mechanisms in place to ensure that all the nodes have a consistent view of the data. This view includes both the contents of the transactions and the order in which these transactions were executed. In the blockchain approach to distributed ledgers, this consistent view is maintained with the help of the blockchain data-structure and the [blockchain consensus algorithm](/bc_proto_consensus_algorithm.md). These two play off of each other to set up a protocol and incentive mechanism to ensure that the nodes are honest in terms of the contents and ordering of the transactions.
+As mentioned before, in a P2P distributed ledger each node has its own copy of the data. So there needs to be mechanisms in place to ensure that all the nodes have a consistent view of the data. This view includes both the contents of the transactions and the order in which these transactions were executed. In the blockchain approach to distributed ledgers, this consistent view is maintained with the help of the blockchain data-structure and the [blockchain consensus algorithm](/bc_proto_consensus_algorithm.md). These two play off of each other to set up a protocol and incentive mechanism to ensure that the nodes are honest in terms of the contents and ordering of the transactions.
 
 In particular, the blockchain data-structure ensures that
 
@@ -21,7 +21,7 @@ The full utility of these will be clearer after we have had a chance to study th
 
 At a high level, the blockchain is a [linked list](https://en.wikipedia.org/wiki/Linked_list) where each item in the list is _block_. The link to the next block in the chain is encoded using the contents of the current block and the next block using hash functions. It is this encoding that helps in maintaining the properties above. 
 
-In the following we first describe what is contained in each block and then describe how these blocks are chained together. Along the way, we use our python-esque pseudocode to make the ideas concrete, and refer to python implementations of the same ideas for detailed self-study later on.
+In the following we first describe what is contained in each block and then describe how these blocks are chained together. Along the way, we use our python-esque pseudo-code to make the ideas concrete, and refer to python implementations of the same ideas for detailed self-study later on.
 
 ## Blocks
 
@@ -40,7 +40,7 @@ The block header, in turn, contains
 6. a nonce/solution to the cryptographic puzzle
 
 
-We quickly define each of the elements in turn. The block id is in the form a _block hash_ a string that uniquely identifies the block and is also a [thumbprint](./bc_proto_prelim.md#uniqueness-of-hash-functions) of its contents. The pointer to the transactions is the hash-string of the root node of a Merkel tree (see below)  used to store the transactions in a block (this is the [next article](./bc_proto_merkel_tree.md) in our sequence). The pointer to the previous block is the block hash of the previous block in the chain. The timestamp is just a standard timestamp showing date time upto micro-second. We define how the nonce and the difficulty levels are when we describe how the block is created. 
+We quickly define each of the elements in turn. The block id is in the form a _block hash_ a string that uniquely identifies the block and is also a [thumbprint](./bc_proto_prelim.md#uniqueness-of-hash-functions) of its contents. The pointer to the transactions is the hash-string of the root node of a Merkel tree (see below)  used to store the transactions in a block (this is the [next article](./bc_proto_merkel_tree.md) in our sequence). The pointer to the previous block is the block hash of the previous block in the chain. The timestamp is just a standard timestamp showing date time up to micro-second. We define how the nonce and the difficulty levels are when we describe how the block is created. 
  
 We now describe how a block is created.
 
@@ -117,7 +117,7 @@ def solve_block_puzzle(trans_hash: str,
                        timestamp: DateTime, 
                        difficulty: nat) -> str:
 
-    puzzle_string = contatenate(trans_hash, 
+    puzzle_string = concatenate(trans_hash, 
                                 prev_block_hash, 
                                 str(timestamp),
                                 str(difficulty)
@@ -157,7 +157,7 @@ It simply concatenates all the inputs, which consists of all the data in the blo
 <p align="center"> <b>Figure: Create Block Hash </b> </p>
 
 
-The last two lines of `create_block()` creates the block header and the block by calling the respective constructors, and then returns the created block. The final created simplifed block is illustrated in Figure: _Simplified Block Creation Summary_.
+The last two lines of `create_block()` creates the block header and the block by calling the respective constructors, and then returns the created block. The final created simplified block is illustrated in Figure: _Simplified Block Creation Summary_.
 
 <p align="center">
   <img src="figures/simplified_block_summary.png"/>
@@ -224,7 +224,7 @@ def add_transaction(bc: Blockchain, transaction: str) -> BlockSimple:
     bc.transaction_list = []
     return new_block
 ```
-The incoming transaction is first added to the the blockchain's list of transactions. After that if the length of the the current transaction list is equal to the `trans_per_block` parameter, a new block is added. 
+The incoming transaction is first added to list of transactions in the blockchain. After that if the length of the the current transaction list is equal to the `trans_per_block` parameter, a new block is added. 
 
 The new block is created by using the function `create_block()` that was introduced above. Once this new block is created, the `block_hash_to_block_map` and the `latest_block_hash` attributes of the block are updated to, respectively, include the new block and set to the block hash of the latest block. Finally, the `current_transactions` of the blockchain is reset to the empty list. 
 
@@ -325,6 +325,11 @@ Since bitcoin is the most well known example of a blockchain, it is worth mentio
 Additionally, the reward in terms of bitcoins for creating a block, (discussed in [this article](./bc_proto_consensus_algorithm.md) in this series) also decreases over time to ensure that there are 21 million bitcoins ever created. This number, the actual value being somewhat arbitrary, was selected to help prevent inflation so that no one can just 'print money'.
 
 
-### Final Words
+### Concluding Words
 
 The above description covers all the core ideas relevant to the blockchain data structure. However, as pointed out earlier, implementing this for a working distributed peer to peer system is generally much more challenging. This is largely because the nodes behave asynchronously, messages get delayed or dropped and so on. We handle some these issues in our implementation but not all. These are further discussed [here](./bc_proto_running_blockchain.md).
+
+<br>
+<hr>
+
+[Next Article: Merkel Tree](./docs/bc_proto_merkel_tree.md)

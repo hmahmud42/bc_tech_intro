@@ -78,3 +78,9 @@ and in the rest of the code we replace `BlockSimple` with `Block` and `get_trans
   <img src="./figures/full_block.png", width=500/>
 </p>
 <p align = "center"><b> Figure: Full block using a Merkel Tree to store transactions.</b></p>
+
+
+<br>
+<hr>
+
+[Next Article: The Consesus Algorithm](./docs/bc_proto_consensus_algorithm.md) 

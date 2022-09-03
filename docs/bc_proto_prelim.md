@@ -15,7 +15,7 @@ In this section discuss some properties of hash functions that are used very hea
 
 ### Uniqueness of Hash Functions
 
-[Hash functions](https://en.wikipedia.org/wiki/Hash_function) like [SHA-256](https://en.wikipedia.org/wiki/SHA-2) are well known concepts in computer science. The blockchain data structure relies very heavily on the "uniqueness property" of these functions. This property means that given two different strings, say `string-1` and `string-2`, with _very high probability_, `SHA-256(string-1)` will be different from `SHA-256(string-2)`. You can check this by running the sha256 python function in the python code [here](../blockchain_proto/puzzle.py#L12) on many different strings. Some examples of strings and their (SHA256) hashes are given below.
+[Hash functions](https://en.wikipedia.org/wiki/Hash_function) like [SHA-256](https://en.wikipedia.org/wiki/SHA-2) are well known concepts in computer science. The blockchain data structure relies very heavily on the "uniqueness property" of these functions. This property means that given two different strings, say `string_1` and `string_2`, with _very high probability_, `SHA-256(string_1)` will be different from `SHA-256(string_2)`. You can check this by running the sha256 python function in the python code [here](../blockchain_proto/puzzle.py#L12) on many different strings. Some examples of strings and their (SHA256) hashes are given below.
 
 ```python
 "blockchain" "ef7797e13d3a75526946a3bcf00daec9fc9c9c4d51ddc7cc5df888f74dd434d1"
@@ -23,7 +23,7 @@ In this section discuss some properties of hash functions that are used very hea
 "Quick Brown Fox" "0a3f5db66fadecb57247516e43d8a3572f3927a4871bca6469ee5a6fb3022041"
 ```
 
-It is important to understand that it is generally safe to assume that the probability of _collision_ (that is two different strings having the same hash) in practice is `0`. For instance for SHA-256 the collision probability is `1.47*10^(-29)` - roughly the same as flipping a fair coin and getting `~97` heads in a row, a practical impossibility. If for any reason you are not happy with this probability, you can always switch to a hash function with a even smaller collision probability, at the cost of higher computational cost.
+You can try out additional examples [here](https://www.wolframalpha.com/input?i=SHA256+%7C+blockchain). It is important to understand that it is generally safe to assume that the probability of _collision_ (that is two different strings having the same hash) in practice is `0`. For instance for SHA-256 the collision probability is `1.47*10^(-29)` - roughly the same as flipping a fair coin and getting `~97` heads in a row, a practical impossibility. If for any reason you are not happy with this probability, you can always switch to a hash function with a even smaller collision probability, at the cost of higher computational cost.
 
 The reason the uniqueness property is useful is that, for long strings (like some piece of data), the hash acts like a thumbprint or a signature which we can store without needing to store the string itself. If subsequently we are presented with a string which is being claimed as the original string, we can calculate the hash of the new string and compare with the stored hash to validate this claim. This property will come in very handy below.
 
@@ -44,8 +44,7 @@ def solve_puzzle(s: str, d: int) -> str:
         h = hash(s + str(nonce))
     return str(nonce)
 ```
-
-The following pseudocode shows how to check that a solution is valid:
+You will see the word `nonce` used quite often in cryptography literature - it stands for *number used once* and often refers to numbers that do not have an intrinsic meaning but supports some kind of cryptographic algorithm. The following pseudocode shows how to check that a solution is valid:
 
 ```python
 def check_solution(s: str, nonce:str , d:int) -> str:
@@ -62,3 +61,8 @@ The following shows some strings and the corresponding nonces using the SHA256 f
 You can check this by opening a (i)python terminal and copying and trying the functions defined [here](../blockchain_proto/puzzle.py).
 
 We note here that solving a computationally expensive puzzle is often referred to as **mining** or creating a **proof of work** in the context of blockchains. It is likely you have heard of these terms often.
+
+<br>
+<hr>
+
+[Next Article: The Blockchain Data Structure](./docs/bc_proto_blockchain_ds.md)
