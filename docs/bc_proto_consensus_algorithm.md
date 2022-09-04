@@ -209,4 +209,4 @@ This concludes our presentation of the consensus algorithm. As the reader may su
 <br>
 <hr>
 
-[Next Article: A Proto-Blockchain Implementation](./docs/bc_proto_implementation.md)
+[Next Article: A Proto-Blockchain Implementation](./bc_proto_implementation.md)

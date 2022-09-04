@@ -21,7 +21,7 @@ field_style = {
 
 
 coloredlogs.install(
-    level='DEBUG',
+    level='INFO',
     fmt='%(asctime)s %(levelname)s: %(message)s',
     field_styles=field_style)
 

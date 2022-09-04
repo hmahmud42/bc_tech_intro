@@ -65,4 +65,4 @@ This concludes our brief look at blockchain/distributed ledger technology at a h
 <br>
 <hr>
 
-[Next Article: Preliminaries](./docs/bc_proto_prelim.md)
+[Next Article: Preliminaries](./bc_proto_prelim.md)

@@ -101,6 +101,6 @@ class LIWebServer:
         app.add_url_rule(GET_BLOCKCHAIN_ROUTE, 'get_blockchain', self.get_blockchain, methods = ['GET'])
         app.add_url_rule(GET_UNADDED_TRANS_ROUTE , 'get_unadded_trans', self.get_unadded_trans, methods = ['GET'])
         app.add_url_rule(ADD_TRANS_ROUTE, 'add_trans', self.add_trans, methods = ['POST'])
-        log_info(logging, f"Starting local interface node web-server http://127.0.0.0:{self.server_port}.")
+        log_info(logging, f"Starting local interface node web-server http://127.0.0.1:{self.server_port}.")
         log_info(logging, f"Use the 'local_interface_client.html' file to interface with the node.")
         app.run(port=self.server_port)

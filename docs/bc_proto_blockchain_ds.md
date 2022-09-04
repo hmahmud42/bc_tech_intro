@@ -332,4 +332,4 @@ The above description covers all the core ideas relevant to the blockchain data 
 <br>
 <hr>
 
-[Next Article: Merkel Tree](./docs/bc_proto_merkel_tree.md)
+[Next Article: Merkel Tree](./bc_proto_merkel_tree.md)

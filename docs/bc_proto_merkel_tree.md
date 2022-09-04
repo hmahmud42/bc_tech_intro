@@ -83,4 +83,4 @@ and in the rest of the code we replace `BlockSimple` with `Block` and `get_trans
 <br>
 <hr>
 
-[Next Article: The Consesus Algorithm](./docs/bc_proto_consensus_algorithm.md) 
+[Next Article: The Consesus Algorithm](./bc_proto_consensus_algorithm.md) 

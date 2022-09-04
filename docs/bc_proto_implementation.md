@@ -50,7 +50,7 @@ This will start a blockchain node which will expect other nodes to connect with 
 2022-08-31 21:57:03 INFO: [Node 1] **** Hello There! ****
 2022-08-31 21:57:03 INFO: [Node 1] Local BC-Proto node is now running...
 2022-08-31 21:57:03 INFO: [Node 1] Port: 5500, New-Peer-Port: 5501, Using registry at: localhost:6000
-2022-08-31 21:57:03 INFO: [Node 1] Starting local interface node web-server http://127.0.0.0:5502.
+2022-08-31 21:57:03 INFO: [Node 1] Starting local interface node web-server http://127.0.0.1:5502.
 2022-08-31 21:57:03 INFO: [Node 1] Use the 'local_interface_client.html' file to interface with the node.
 ```
 
@@ -111,7 +111,7 @@ The local interface can be started by opening the file `local_interface_client.h
 
 To interface with a node, enter the address given when the node started:
 ```
-2022-08-31 21:57:03 INFO: [Node 1] Starting local interface node web-server http://127.0.0.0:5502.
+2022-08-31 21:57:03 INFO: [Node 1] Starting local interface node web-server http://127.0.0.1:5502.
 ```
 in the box in the top left corner. 
 
@@ -149,4 +149,4 @@ The following is an incomplete list of features not yet implemented but would be
 <br>
 <hr>
 
-[Next Article: Final Words](./docs/bc_proto_final_words.md)
+[Next Article: Final Words](./bc_proto_final_words.md)
