@@ -15,9 +15,8 @@ from blockchain_proto.blockchain.block_simple import BlockHeader, BlockSimple
 from blockchain_proto.forks.fork_manager import  ForkManager
 from blockchain_proto.consts import NULL_BLOCK_HASH
 from block_creator_for_test import create_transactions
-from blockchain_proto.messages import unordered_trans_msg, prec_block_not_found_msg, \
-    earliest_trans_mismatch_msg, block_was_already_added_msg
-
+from blockchain_proto.exceptions import UnorderedTransactionError, PrecBlockNotFoundError, \
+    EarliestTransMismatchError, BlockWasAlreadyAddedError
 
 
 def create_block_header():
@@ -90,7 +89,7 @@ def test_fork_manager_add():
 
     # Test error condition: block was already added
     ret = fork_manager.add_blocks([block])
-    error_msg = block_was_already_added_msg(block.hash())
+    error_msg = str(BlockWasAlreadyAddedError(block.hash()))
     assert ret[0] == error_msg
     
     # Test error condition transaction ordering
@@ -99,16 +98,18 @@ def test_fork_manager_add():
     trans = create_transactions(base_trans)
     prev_hash = block_list[-1].hash()
     block = create_block(trans, prev_hash, 1)
-    ret = fork_manager.add_blocks([block])
-    error_msg = earliest_trans_mismatch_msg("User 1", block.hash(), 
-                    base_trans[0], base_trans[0])
-    assert ret[0] == error_msg
+    try: 
+        fork_manager.add_blocks([block])
+    except EarliestTransMismatchError as err:
+        pass
+    else: 
+        raise False
 
     # Test prec block not found 
     bad_prev_hash =  "RANDOM_HASH"
     block = create_block(trans, bad_prev_hash, 1)
     ret = fork_manager.add_blocks([block])
-    error_msg = prec_block_not_found_msg(block.hash(), bad_prev_hash)
+    error_msg = str(PrecBlockNotFoundError(block.hash(), bad_prev_hash))
     assert ret[0] == error_msg  
 
     # test unordered transaction message
@@ -117,9 +118,12 @@ def test_fork_manager_add():
     trans = list(create_transactions(base_trans))
     trans[0], trans[1] = trans[1], trans[0]
     block = create_block(trans, prev_hash, 1)
-    ret = fork_manager.add_blocks([block])
-    error_msg = unordered_trans_msg("User 1", block.hash())
-    assert ret[0] == error_msg
+    try:
+        fork_manager.add_blocks([block])
+    except UnorderedTransactionError as err:
+        pass
+    else:
+        assert False
 
 
 def test_fork_manager_cleanup():

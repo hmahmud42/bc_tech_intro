@@ -62,7 +62,7 @@ def test_block_header():
     assert bh_json[BLOCK_HASH] == bh.block_hash and \
            bh_json[TRANS_HASH] == bh.transactions_hash and \
            bh_json[PREV_BLOCK_HASH] == bh.prev_block_hash and \
-           bh_json[TIMESTAMP] == bh.timestamp and \
+           bh_json[TIMESTAMP] == str(bh.timestamp) and \
            bh_json[DIFF] == bh.difficulty and \
            bh_json[NONCE] == bh.nonce
 
