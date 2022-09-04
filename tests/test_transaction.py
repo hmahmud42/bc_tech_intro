@@ -11,9 +11,10 @@ Tests for the classes Transaction and TransactionManager.
 from collections import defaultdict
 from blockchain_proto.consts import TRANS_NO, USER_ID, TRANS_STR
 from blockchain_proto.blockchain.puzzle import sha_256_hash_string
+from blockchain_proto.exceptions import TransWasAlreadyAddedError
 from blockchain_proto.transactions.transaction import Transaction 
 from blockchain_proto.transactions.free_transaction_manager import FreeTransactionManager
-
+from blockchain_proto.exceptions import TransWasAlreadyAddedError
 
 def test_transaction():
     # test creation
@@ -62,14 +63,14 @@ def test_transaction():
         tr_json[TRANS_NO] == 23 and \
         tr_json[TRANS_STR] == "Pay Bob 23 Gold coins"
 
-    assert str(tr1) == "User 1 23 Pay Bob 23 Gold coins"
+    assert str(tr1) == "User 1: [23] Pay Bob 23 Gold coins"
 
     # test hashing
     tr_strs = [
-        "User 1 23 Pay Bob 23 Gold coins",
-        "User 1 24 Pay Bob 23 Gold coins",
-        "User 1 23 Pay Bob 23 Gold coins",
-        "User 2 1 Pay Bob 23 Gold coins"
+        "User 1: [23] Pay Bob 23 Gold coins",
+        "User 1: [24] Pay Bob 23 Gold coins",
+        "User 1: [23] Pay Bob 23 Gold coins",
+        "User 2: [1] Pay Bob 23 Gold coins"
     ]
     hashes = sha_256_hash_string("".join(tr_strs))
     assert Transaction.get_trans_hash([tr1, tr2, tr3, tr4]) == hashes
@@ -97,7 +98,7 @@ def test_transaction_manager_add():
 
     try:
         free_trans_manager.add_transaction(tr1_dup)
-    except ValueError as ve:
+    except TransWasAlreadyAddedError as ve:
         pass
     else:
         assert False
