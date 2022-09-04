@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proto-Blockhain Node Interface</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
+</head>
+<!-- style taken from "https://www.w3schools.com/w3css/4/w3.css" -->
+<style>
+    
+    /* html,body{font-family:Verdana,sans-serif;font-size:15px;line-height:1.5}
+    h1{font-size:36px}h2{font-size:30px}h3{font-size:24px}h4{font-size:20px}h5{font-size:18px}h6{font-size:16px}
+    h1,h2,h3,h4,h5,h6{font-family:"Segoe UI",Arial,sans-serif;font-weight:400;margin:10px 0}.w3-wide{letter-spacing:4px}  */
+
+    .column {
+      float: left;
+       width: 50%;
+    }
+    .row {
+        content: "";
+        display: flex;
+        clear: both;
+    }
+
+    .data_form {display: table; border-collapse: separate;}
+    .data_section { display: table-row; }
+	.data_label {display: table-cell; text-align: right;}
+	.data_input {display: table-cell;}        
+
+    body {
+        margin: 5px;
+    }
+
+</style>
+
+
+<body style="margin:2;padding:2">
+    <div style="text-align: center; color: white; background-color: coral;">
+    <h1>Proto Blockchain Interface</h1>
+    </div>
+    Node Address: <input type="text" id="server_address" value="http://127.0.0.1:[port]">
+
+    <hr>
+    <div class="row" >
+        <div class="column" >
+
+            <h3 style="color: coral;text-align: center; font-weight: bold;"> Add transactions</h3>
+                <div id="add", class="data_form">
+                
+                    <p class="data_section"> 
+                        <label style="display: table-cell;text-align: left; font-weight: bold;"> Transaction 1 </label> 
+                    </p>
+                    <p></p>
+
+                    <p class="data_section">
+                        <label class="data_label">User ID: </label> 
+                        <input class="data_input" type="text" id="trans_1_user_id" value="Enter user ID here">
+                    </p>
+                    <p></p>
+                    <p class="data_section">
+                        <label class="data_label">Transaction No: </label> 
+                        <input type="text" class="data_input" id="trans_1_trans_no" value="Enter transaction No. here">
+                    </p>
+                    <p></p>
+                    <p class="data_section">
+                        <label class="data_label">Transaction Details:  </label> 
+                        <input type="text"  class="data_input" class="data_input" id="trans_1_trans_details" value="Enter transaction details here">
+                    </p>
+                
+                </div>
+                <p></p>
+                <button 
+                    type="button"
+                    onclick="new_transaction_row()">
+                    New Transaction Row
+                </button>
+                <button 
+                    type="button"
+                    onclick="reset()">
+                    Reset
+                </button>
+
+                <p></p>
+                <button 
+                    type="button"
+                    onclick="submit_all_trans()">
+                    <b> Submit All</b>
+                </button>
+                <hr>
+
+
+        </div>
+        <div class="column">        
+
+            <h3 style="text-align:center;color: coral; font-weight: bold;"> Retrieved Blockchain </h3> 
+            <button type="button" onclick="retrieve_blockchain()"> Retrieve Chain </button>
+            <textarea readonly id="blockchain" rows=10 style="width: 95%;"> </textarea>
+
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="column">
+            <h3 style="text-align:center;color: coral; font-weight: bold;">Node Response</h3> 
+            <br>
+            
+            <textarea readonly id="node_response" rows=10 style="width: 95%;"> </textarea>
+
+        </div>
+        <div class="column">
+            <h3 style="text-align:center; color: coral; font-weight: bold;">Transactions Not Yet In Chain</h3> 
+            <button type="button" onclick="retrieve_unadded_trans()"> Retrieve Transactions </button>
+            <textarea readonly id="unadded_trans" rows=10 style="width: 95%;"> </textarea>        
+        </div>
+      </div>
+
+
+
+</body>
+
+
+<!-- Javascript functions to interface with the running node. -->
+<script>
+
+    count = 1
+
+    function create_row_elem(){
+        let row_p = document.createElement("p");
+        row_p.classList.add("data_section");
+
+        let lbl = document.createElement("label");
+        lbl.classList.add("data_label");
+        row_p.appendChild(lbl);
+
+        let inp = document.createElement("input");
+        inp.classList.add("data_input");
+        inp.type = "text";
+        row_p.appendChild(inp)
+        
+        obj = {row_p, lbl, inp}
+
+        return obj
+
+    }
+
+    function new_transaction_row() {
+        
+        count = count + 1
+
+        let add_trans_div_elem = document.getElementById("add")
+
+        // Add the title
+        const trans_title_row = document.createElement("p");
+        trans_title_row.class = "data_section";
+        const trans_title_label = document.createElement("label");
+        trans_title_label.style = "display: table-cell;text-align: left; font-weight: bold;";
+        trans_title_label.appendChild(document.createTextNode("Transaction " + count));
+        trans_title_row.appendChild(trans_title_label);
+        add_trans_div_elem.appendChild(trans_title_row);
+
+        // Add the input fields
+        lbls = ["User ID:", "Transaction No:", "Transaction Details:"]
+        inp_vals = ["Enter User ID here", "Enter transaction No. here", "Enter transaction details here"]
+        inp_ids = ["trans_"+count+"_user_id", "trans_"+count+"_trans_no", "trans_"+count+"_trans_details"]
+
+        for(let i=0;i<lbls.length;i++){
+            var row = create_row_elem();
+            row.lbl.appendChild(document.createTextNode(lbls[i]))
+            row.inp.value = inp_vals[i];
+            row.inp.id = inp_ids[i];
+            add_trans_div_elem.appendChild(row.row_p)
+        }
+        
+    }
+
+    function remove_all_children(elem_id) {
+        let elem = document.getElementById(elem_id);
+        while( elem.hasChildNodes() ){
+            elem.removeChild(elem.lastChild);
+        }
+    }
+
+    function reset(){
+        remove_all_children("add")
+        count = 0
+        new_transaction_row()
+    }
+
+    err_count = 0
+    function gather_trans_data(){
+        var data = []
+        
+        var field_names = ['user_id', 'trans_no', 'trans_details']
+        for (let i=1; i<=count; i++){
+            var trans_obj = {}    
+            for (fn in field_names){
+                var inp = document.getElementById('trans_'+ i + '_' + field_names[fn]);
+                trans_obj[field_names[fn]] = inp.value
+            }
+            data.push(trans_obj)
+        }
+        return data
+    }
+
+    error_msg = "Unable to connect to node: make sure that the node is running and you are" +  
+                  "using the correct address."; 
+
+    function submit_all_trans(){
+        document.getElementById('node_response').value = ""
+        var url = document.getElementById('server_address').value + '/add_trans';
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = 
+            function() {
+                // console.log("ready state is "+ request.readyState)
+                // console.log("request status "+ request.status)
+                if (request.readyState === 4){   //if complete
+                    if(request.status === 200){  //check if "OK" (200)
+                    document.getElementById('node_response').value = request.response;
+                    } else {
+                        document.getElementById('node_response').value = error_msg + 
+                                " Status: " + request.status + request.statusText;
+   
+                    }
+                }
+             }
+        try{
+            request.open("POST", url, true);
+            request.setRequestHeader("Content-Type", "application/json");
+            trans_data = gather_trans_data()
+            request.send(JSON.stringify(trans_data))
+        }
+        catch (e) {
+            document.getElementById('node_response').value = e
+
+        }
+    }
+
+    function http_get(url, output_elem){
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = 
+            function() {
+                if (request.readyState === 4){   //if complete
+                    if(request.status === 200){  //check if "OK" (200)
+                        output_elem.value = request.responseText;
+                    } else {
+                        output_elem.value = error_msg + " Status: " + request.status + request.statusText 
+                    }
+                } 
+             }
+        try{
+            request.open("GET", url, true);
+            request.send( null );
+
+        }
+        catch (e) {
+            console.log("internal" + e)
+            output_elem.value = error_msg + " Error: " + e
+
+        }
+    }
+
+    // function http_get(theUrl){
+    //     var xmlHttp = new XMLHttpRequest();
+    //     xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+    //     xmlHttp.send( null );
+    //     return xmlHttp.responseText;
+    // }
+
+    function retrieve_blockchain(){
+        var elem = document.getElementById('blockchain')
+        elem.value = ""
+        url = document.getElementById('server_address').value + "/get_blockchain";
+        http_get(url, elem)
+
+    }
+
+    function retrieve_unadded_trans(){
+        var elem = document.getElementById('unadded_trans')
+        elem.value = ""
+        url = document.getElementById('server_address').value + "/get_unadded_trans";
+        http_get(url, elem)
+    }
+
+</script>
+
+
+</html>
