@@ -65,4 +65,4 @@ We note here that solving a computationally expensive puzzle is often referred t
 <br>
 <hr>
 
-[Next Article: The Blockchain Data Structure](./docs/bc_proto_blockchain_ds.md)
+[Next Article: The Blockchain Data Structure](./bc_proto_blockchain_ds.md)
